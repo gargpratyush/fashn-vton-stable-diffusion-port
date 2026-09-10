@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "core/util.h"
+#include "model/diffusion/fashn_vton.h"
 #include "model_io/gguf_io.h"
 #include "model_io/safetensors_io.h"
 #include "model_io/torch_legacy_io.h"
@@ -98,7 +99,8 @@ void convert_tensor(void* src,
                     ggml_type dst_type,
                     int nrows,
                     int n_per_row,
-                    std::vector<float> imatrix = {}) {
+                    std::vector<float> imatrix = {},
+                    LoadDiagnostics* diagnostics = nullptr) {
     int n = nrows * n_per_row;
     if (src_type == dst_type) {
         size_t nbytes = n * ggml_type_size(src_type) / ggml_blck_size(src_type);
@@ -130,8 +132,10 @@ void convert_tensor(void* src,
             throw std::runtime_error(sd_format("type %s unsupported for integer quantization: no dequantization available",
                                                ggml_type_name(src_type)));
         }
+        ScopedLoadScratch scratch(diagnostics, true);
         std::vector<char> buf;
         buf.resize(sizeof(float) * n);
+        scratch.set(buf.capacity());
         char* src_data_f32 = buf.data();
         qtype->to_float(src, (float*)src_data_f32, n);
         if (dst_type == GGML_TYPE_F16) {
@@ -148,6 +152,15 @@ void convert_tensor(void* src,
 
 ModelLoader::ModelLoader()
     : n_threads_(sd_get_num_physical_cores()) {
+}
+
+std::vector<ModelLoader::MappedFileInfo> ModelLoader::mapped_files() const {
+    std::vector<MappedFileInfo> result;
+    for (const auto& file : file_data) {
+        if (file.mmapped)
+            result.push_back({file.path, reinterpret_cast<uintptr_t>(file.mmapped->data()), file.mmapped->size()});
+    }
+    return result;
 }
 
 size_t ModelLoader::add_file_path(const std::string& file_path) {
@@ -197,8 +210,16 @@ bool ModelLoader::init_from_file(const std::string& file_path, const std::string
     }
 }
 
-void ModelLoader::convert_tensors_name() {
-    SDVersion version = (version_ == VERSION_COUNT) ? get_sd_version() : version_;
+bool ModelLoader::convert_tensors_name() {
+    SDVersion version;
+    if (FashnVTONConfig::is_candidate(tensor_storage_map)) {
+        version = get_sd_version();
+        if (version == VERSION_COUNT) {
+            return false;
+        }
+    } else {
+        version = (version_ == VERSION_COUNT) ? get_sd_version() : version_;
+    }
     String2TensorStorage new_map;
 
     for (auto& [_, tensor_storage] : tensor_storage_map) {
@@ -209,6 +230,7 @@ void ModelLoader::convert_tensors_name() {
     }
 
     tensor_storage_map.swap(new_map);
+    return true;
 }
 
 bool ModelLoader::init_from_file_and_convert_name(const std::string& file_path, const std::string& prefix, SDVersion version) {
@@ -218,8 +240,7 @@ bool ModelLoader::init_from_file_and_convert_name(const std::string& file_path, 
     if (!init_from_file(file_path, prefix)) {
         return false;
     }
-    convert_tensors_name();
-    return true;
+    return convert_tensors_name();
 }
 
 /*================================================= GGUFModelLoader ==================================================*/
@@ -230,6 +251,10 @@ bool ModelLoader::init_from_gguf_file(const std::string& file_path, const std::s
     std::vector<TensorStorage> tensor_storages;
     std::string error;
     if (!read_gguf_file(file_path, tensor_storages, &error)) {
+        LOG_ERROR("%s", error.c_str());
+        return false;
+    }
+    if (!FashnVTONConfig::validate_file_names(tensor_storages, prefix, &error)) {
         LOG_ERROR("%s", error.c_str());
         return false;
     }
@@ -258,6 +283,10 @@ bool ModelLoader::init_from_safetensors_file(const std::string& file_path, const
     std::vector<TensorStorage> tensor_storages;
     std::string error;
     if (!read_safetensors_file(file_path, tensor_storages, &error, &metadata_)) {
+        LOG_ERROR("%s", error.c_str());
+        return false;
+    }
+    if (!FashnVTONConfig::validate_file_names(tensor_storages, prefix, &error)) {
         LOG_ERROR("%s", error.c_str());
         return false;
     }
@@ -388,6 +417,16 @@ bool ModelLoader::init_from_diffusers_file(const std::string& file_path, const s
 }
 
 SDVersion ModelLoader::get_sd_version() {
+    if (FashnVTONConfig::is_candidate(tensor_storage_map)) {
+        std::string error;
+        auto config = FashnVTONConfig::detect_from_weights(tensor_storage_map);
+        if (!config.validate_v15(tensor_storage_map, "model.diffusion_model", &error)) {
+            LOG_ERROR("%s", error.c_str());
+            return VERSION_COUNT;
+        }
+        return VERSION_FASHN_VTON_1_5;
+    }
+
     TensorStorage token_embedding_weight, input_block_weight, context_ebedding_weight;
 
     bool has_multiple_encoders = false;
@@ -824,6 +863,7 @@ void ModelLoader::process_model_files(bool enable_mmap, bool writable_mmap) {
     }
 
     model_files_processed = true;
+    diagnostic_event("source_mapping_ready");
 }
 
 std::vector<MmapTensorStore> ModelLoader::mmap_tensors(std::map<std::string, ggml_tensor*>& tensors,
@@ -920,6 +960,7 @@ bool ModelLoader::load_tensors(on_new_tensor_cb_t on_new_tensor_cb,
                                const std::set<std::string>* target_tensor_names,
                                bool log_progress) {
     process_model_files(enable_mmap, false);
+    diagnostic_event("conversion_begin");
 
     std::atomic<int64_t> read_time_ms(0);
     std::atomic<int64_t> memcpy_time_ms(0);
@@ -1017,6 +1058,7 @@ bool ModelLoader::load_tensors(on_new_tensor_cb_t on_new_tensor_cb,
                     }
                 }
 
+                ScopedLoadScratch read_scratch(diagnostics_.get(), false);
                 std::vector<uint8_t> read_buffer;
                 std::vector<uint8_t> convert_buffer;
                 std::vector<uint8_t> zip_entry_buffer;
@@ -1144,6 +1186,7 @@ bool ModelLoader::load_tensors(on_new_tensor_cb_t on_new_tensor_cb,
                         }
                     }
 
+                    read_scratch.set(read_buffer.capacity());
                     t0 = ggml_time_ms();
                     if (!read_data(read_buf, nbytes_to_read)) {
                         failed = true;
@@ -1172,7 +1215,10 @@ bool ModelLoader::load_tensors(on_new_tensor_cb_t on_new_tensor_cb,
                                        dst_tensor->type,
                                        (int)tensor_storage.nelements() / (int)tensor_storage.ne[0],
                                        (int)tensor_storage.ne[0],
-                                       std::move(imatrix));
+                                       std::move(imatrix),
+                                       diagnostics_.get());
+                        if (diagnostics_)
+                            diagnostics_->converted_tensors.fetch_add(1);
                     } else {
                         convert_buf = read_buf;
                     }
@@ -1198,6 +1244,7 @@ bool ModelLoader::load_tensors(on_new_tensor_cb_t on_new_tensor_cb,
         }
 
         while (true) {
+            diagnostic_event("conversion_sample");
             size_t current_idx = tensor_idx.load();
             if (current_idx >= tensors_to_process.size() || failed) {
                 break;
@@ -1242,6 +1289,7 @@ bool ModelLoader::load_tensors(on_new_tensor_cb_t on_new_tensor_cb,
                  (convert_time_ms.load() / (float)last_n_threads) / 1000.f,
                  (copy_to_backend_time_ms.load() / (float)last_n_threads) / 1000.f);
     }
+    diagnostic_event(success ? "conversion_end" : "conversion_failed");
     return success;
 }
 

@@ -1,0 +1,920 @@
+"""Assemble the project history from authored commentary and immutable source/evidence snapshots."""
+import base64
+import csv
+from datetime import datetime, timezone
+import hashlib
+import html
+import json
+from pathlib import Path
+import re
+
+ROOT = Path(r"C:\source\fashn-vton-reference")
+REPO = Path(r"C:\source\stable-diffusion.cpp")
+SESSION = Path(r"<USER_HOME>\.copilot\session-state\24fcff7d-3f4e-44b0-92cb-0a411c3c64ff\files")
+OUT = ROOT / r"reports\fashn-vton-project-history.html"
+records = {}
+snippets = []
+illustrations = []
+chapters = []
+
+
+def esc(value):
+    return html.escape(str(value), quote=True)
+
+
+def read(path):
+    path = Path(path)
+    data = path.read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    key = str(path)
+    if key in records:
+        assert records[key]["sha256"] == digest, "Source changed during compilation: " + key
+    records[key] = {"sha256": digest, "bytes": len(data)}
+    return data
+
+
+def text(path):
+    return read(path).decode("utf-8-sig")
+
+
+def link(path, label=None):
+    path = Path(path)
+    assert path.exists(), path
+    return f'<a href="{esc(path.as_uri())}">{esc(label or path.name)}</a>'
+
+
+def paras(value):
+    return "".join("<p>" + esc(p.strip()) + "</p>" for p in value.strip().split("\n\n") if p.strip())
+
+
+def table(headers, rows):
+    return '<div class="table-scroll"><table><thead><tr>' + "".join(
+        "<th>" + esc(v) + "</th>" for v in headers) + "</tr></thead><tbody>" + "".join(
+        "<tr>" + "".join("<td>" + esc(v) + "</td>" for v in row) + "</tr>" for row in rows) + "</tbody></table></div>"
+
+
+def example(label, content, note="Explanatory sketch, not a complete standalone program."):
+    return f'<div class="code-label">{esc(label)}</div><p class="small">{esc(note)}</p><pre><code>{esc(content.strip())}</code></pre>'
+
+
+def source(relative, first, last, explanation):
+    path = REPO / relative
+    lines = text(path).splitlines()
+    assert 1 <= first <= last <= len(lines), (path, first, last)
+    body = "\n".join(lines[first - 1:last])
+    identity = {"path": str(path), "first_line": first, "last_line": last,
+                "excerpt_sha256": hashlib.sha256(body.encode()).hexdigest()}
+    snippets.append(identity)
+    numbered = "".join(f'<span class="code-line"><span class="line-no">{i}</span>{esc(line)}</span>'
+                       for i, line in enumerate(lines[first - 1:last], first))
+    return (f'<div class="source"><div class="code-label">Current source: {link(path, relative)}'
+            f' &middot; L{first}&ndash;{last}</div>{paras(explanation)}'
+            f'<pre><code>{numbered}</code></pre></div>')
+
+
+def image(path, caption):
+    path = Path(path)
+    data = read(path)
+    suffix = path.suffix.lower()
+    mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}[suffix]
+    illustrations.append({"path": str(path), "sha256": records[str(path)]["sha256"], "caption": caption})
+    uri = f"data:{mime};base64," + base64.b64encode(data).decode("ascii")
+    return f'<figure><img loading="lazy" src="{uri}" alt="{esc(caption)}"><figcaption>{esc(caption)} Right-click the image to save its embedded copy. {link(path, "Local original")}</figcaption></figure>'
+
+
+def chapter(number, title, why, how, result, lesson, code="", extra="", evidence=(), status="Delivered"):
+    identifier = f"cp-{number:02d}"
+    body = (f'<article id="{identifier}" class="chapter"><div class="eyebrow">Checkpoint {number:02d}'
+            f' <span class="badge">{esc(status)}</span></div><h2>{esc(title)}</h2>'
+            f'<h3>Why this step was needed</h3>{paras(why)}<h3>What changed and how</h3>{paras(how)}'
+            f'{code}<h3>Observed results</h3>{paras(result)}{extra}'
+            f'<div class="lesson"><strong>What we learned / boundary</strong>{paras(lesson)}</div>')
+    if evidence:
+        body += '<p class="evidence"><strong>Evidence:</strong> ' + " &middot; ".join(
+            link(ROOT / p, p) for p in evidence) + "</p>"
+    body += "</article>"
+    chapters.append({"number": number, "id": identifier, "title": title, "status": status, "html": body})
+
+
+chapter(1, "Build an independent, pinned numerical reference",
+    "A model port needs a trustworthy numerical target before native code can be judged. Merely producing an image would not reveal a wrong patch layout, time convention or null branch.",
+    "Pinned the original FASHN source, released weight revision and Python packages. The exporter validates the safetensors header, tensor names/shapes/types and full checkpoint digest, then loads the original model on CPU in F32. It generates deterministic noise and synthetic conditions, exports named activations, and adapts their rank/layout for the native fixture reader.\n\nSynthetic conditions deliberately exercise the mathematics without pretending to be photographic garment-quality evidence. Reference utilities preserve the original schedule's rounding rather than substituting an algebraically similar formula.",
+    "The initial reference tooling suite passed 25 tests, covering the real checkpoint contract, patch layouts, null conditioning, CFG and replay. The released file contains 366 BF16 tensors / 971,814,240 scalars; 365 tensors are used for inference, with the optional 432-element patch_mixer_token unused.",
+    "BF16 storage is not BF16 arithmetic. A correct oracle also needs matching preprocessing, random-number semantics, schedule and output conversion.",
+    source(r"scripts\export_fashn_vton_reference.py", 195, 215,
+           "Noise and synthetic conditions are explicit fixtures. The model architecture and header checks precede actual inference."),
+    evidence=("reports\\implementation-and-experiment-history.md",))
+
+chapter(2, "Run and replay the real-weight full-canvas oracle",
+    "Primitive tests cannot establish that the complete 972-million-scalar transformer is wired correctly. Both conditional and null branches needed inspectable, repeatable full-resolution targets.",
+    "Executed the original model with the released checkpoint at 576x864. Captured embeddings, position data, patch-mixer outputs, double/single-stream states and final RGB velocities. Exported one Euler update, native-layout fixtures and a replay using identical inputs. Added a later nonzero-time fixture so the implementation was not accepted only at t=0.",
+    "Initial conditional and unconditional reference forwards took approximately 58.1 and 57.7 seconds. All 77 exported tensors matched exactly on repeat. These were finite full-canvas outputs, not a real-person try-on quality assessment.",
+    "Repeatability and two-branch coverage established an oracle. They did not yet provide a C++ model, photographic preparation or a full sampling trajectory.",
+    source(r"scripts\export_fashn_vton_reference.py", 262, 286,
+           "The capture mechanism observes the original model at named interfaces rather than comparing only a final PNG."),
+    evidence=("oracle-step0", "oracle-step0-replay", "oracle-step15"))
+
+chapter(3, "Recognize FASHN without misclassifying it as FLUX",
+    "Shared FLUX-like tensor names could send this checkpoint into the wrong model family. Prefix collisions, unsupported presets and missing tensors must fail before backend execution.",
+    "Added the FASHN model version/configuration, characteristic-tensor detection, strict released-preset shape/type validation and canonical names. Raw and prefixed names are normalized and checked for collisions. Integrated recognition with loader/name conversion/model dispatch and conversion. At this stage, valid recognition still deliberately rejected generation until the graph existed.",
+    "Native contract tests, actual CLI rejection cases and CLI/server builds passed. The original SD 1.5 smoke output remained pixel-identical, providing a non-FASHN regression control.",
+    "Recognition is a contract, not successful inference. It is safer to return an explicit unsupported-generation message than accidentally instantiate a nearby architecture.",
+    source(r"src\model\diffusion\fashn_vton.h", 63, 107,
+           "Candidate detection is followed by collision rejection. Current dtype handling also includes later diagnostic conversion support."),
+    evidence=("reports\\implementation-and-experiment-history.md",))
+
+chapter(4, "Port the transformer, then fix the hidden GELU rounding",
+    "The outer FASHN model is not a FLUX alias: it has two differently shaped image inputs, target-only patch mixers, category conditioning and pixel reconstruction. A seemingly correct first graph failed layer comparisons.",
+    "Implemented target/garment patchification, time/category embeddings, [0,row,column] rotary positions, four patch mixers, eight double-stream blocks, sixteen single-stream blocks and unpatchification to RGB velocity. Reused compatible FLUX blocks and GGML infrastructure while preserving other models' defaults.\n\nThe first full native run exposed GGML's FP16-lookup GELU even when tensors were labeled F32. Added a FASHN-only explicit F32 tanh-GELU expression. Kept the original numerical tolerances and used named captures to localize the discrepancy. Native dimension zero is the contiguous dimension; omitted trailing singleton batch dimensions were normalized in fixtures instead of mistaken for different tensors.",
+    "All 17 captured tensors per branch passed at zero and nonzero times. Initial conditional/null final-velocity relative L2 errors were 5.79e-7 / 3.58e-7. A 24,001-value GELU sweep over [-12,12] covered the primitive.",
+    "A dtype label does not prove arithmetic fidelity. The accepted fix preserved full-F32 intermediates; it did not loosen gates. The later fused branch visible below was added at checkpoint 34, not in the initial graph port.",
+    source(r"src\model\diffusion\fashn_vton_model.h", 55, 74,
+           "The released block inventory and separate 7-channel/4-channel patch embedders are explicit.") +
+    source(r"src\model\diffusion\flux.hpp", 21, 34,
+           "The ordinary path remains unchanged for other models; the strict expression avoids the FP16 lookup."),
+    evidence=("native-graph-f32-gelu", "native-graph-step15"))
+
+chapter(5, "Implement ascending-time Euler, CFG, noise and cleanup",
+    "The existing flow-model conventions were not interchangeable with FASHN's ascending 0-to-1 schedule and positive velocity update. Wrong null inputs or per-sample reseeding can produce plausible but nonmatching results.",
+    "Implemented the original rounded shifted schedule and x += dt * velocity, with velocity = vu + cfg*(vc-vu). CFG=1 and the configured final skipped-CFG steps omit unnecessary null forwards. Null images/poses are normalized zeros, not black pixels that normalize to -1.\n\nNoise is drawn once for the logical sample batch, then sliced; samples do not use seed+i. Added finite-value/shape checks, request-local progress/cancellation and RAII runner cleanup. The later trajectory observer reports failures rather than silently producing incomplete evidence.",
+    "The original 30-step schedule and Euler reference updates matched exactly in sampler tests. Skip counts, cancellation and cleanup passed. A 20-step CFG1.5/skip1 request needs 39 transformer forwards; multiple outputs remain sequential B=1 graphs.",
+    "The continuous equations alone are insufficient: F32 schedule rounding and RNG draw ordering are part of reproducibility. Cancellation is cooperative at stage/forward boundaries.",
+    source(r"src\runtime\fashn_vton_sampling.h", 26, 49, "This reproduces the reference's F32 schedule construction and rejects collapsed schedules.") +
+    source(r"src\runtime\fashn_vton_sampling.h", 67, 93, "The actual native Euler update validates each resulting value."),
+    evidence=("reports\\implementation-and-experiment-history.md",))
+
+chapter(6, "Expose prepared-input inference through C and CLI",
+    "A graph diagnostic is not a usable inference interface. FASHN requires its own image-conditioned request rather than pretending text prompts or a VAE are relevant.",
+    "Added a size-versioned sd_try_on_params_t, initialization/capability helpers, generate_try_on, explicit output ownership and later request-local callbacks without changing existing public struct layouts. Generic image/video entry points reject FASHN contexts. A context must not execute concurrent generations.\n\nCLI --mode try_on --try-on-inputs accepts a strict manifest and four lossless 576x864 images: RGB person/garment and grayscale poses. Manifest-relative paths, category/crop validation, unsupported-option rejection and cleanup are shared. Pixel output clamps (x+1)/2, multiplies by 255, truncates to uint8, then crops without resizing.",
+    "Five native CTests, 27 reference tests and five CLI integration tests passed in the initial slice. A complete two-step CLI output differed from PyTorch in only 88 of 1,492,992 full-canvas channels, each by one. Cropped inference passed and SD 1.5 stayed unchanged.",
+    "Two-step synthetic output proves integration, not realistic garment fidelity. Prepared input was the first supported runtime contract; raw-image preparation came later.",
+    source(r"include\stable-diffusion.h", 505, 536, "Caller-owned inputs and the size-versioned request keep the new workflow separate from existing generation APIs.") +
+    example("Pixel semantics", "rgb = np.clip((image + 1.0) / 2.0, 0.0, 1.0)\npng = (rgb * 255).astype(np.uint8)  # truncate, do not round\ncropped = png[y:y + height, x:x + width]", "Explanatory NumPy-style sketch; channel layout adaptation is omitted."),
+    evidence=("native-try-on-two-step.png",))
+
+chapter(7, "Establish parser-free Python preparation first",
+    "The native model consumes normalized conditions, not arbitrary photographs. Resizing, pose rendering and padding must match the upstream pipeline before model discrepancies can be interpreted.",
+    "Added a reference-backed preparation adapter with hash-verified local DWPose weights, source transforms, RGB/BGR conversions, no-upsample initial fit, pose extraction, grayscale drawing, final resize/pad and crop metadata. Flat-lay garments use the upstream blank garment pose. Missing keypoints fail explicitly rather than substituting a success-shaped blank pose.",
+    "The parser-free flat-lay / unmasked-person path matched original normalized tensors and geometry exactly, including real pose inference, and its prepared inputs successfully ran through native generation.",
+    "The early smoke pair used a real person and a clearly labeled procedural garment. It was not a production clothing example. Segmentation-free person handling does not mean a worn garment can always bypass parsing.",
+    source(r"scripts\prepare_fashn_vton.py", 53, 75,
+           "Mode validation separates the truly parser-free case from worn-garment and masked-person preparation."),
+    evidence=("reports\\implementation-and-experiment-history.md",))
+
+chapter(8, "Add asynchronous prepared-image HTTP jobs",
+    "A usable local service needs bounded admission, strict requests and a job lifecycle rather than a long blocking HTTP request. Accepting client-supplied server-side file paths would also be an inappropriate transport contract.",
+    "Added POST /sdcpp/v1/try_on and FASHN capabilities to the existing server. Requests carry embedded image bytes, not server filesystem paths. Reused shared prepared-input validation and queued/running/completed/failed/cancelled state handling, PNG delivery, queue count limits and TTLs.\n\nInitially only queued cancellation was supported; running cancellation returned 409, matching the existing server. Checkpoint 13 later extended active cancellation. Current route excerpts also reflect subsequent lifecycle hardening.",
+    "HTTP output matched CLI pixels exactly. Live coverage included 31 invalid-request cases, a failed generation, saturation and cancellation of 63 queued jobs. Test servers were stopped afterward.",
+    "This is a trusted local experimental server, not authenticated production hosting or durable distributed job storage.",
+    source(r"examples\server\routes_sdcpp.cpp", 456, 478,
+           "The route validates capability and input before publishing a queued job; later admission checks follow this excerpt."),
+    evidence=("server-checkpoint8-final",))
+
+chapter(9, "Authorize and isolate parser-dependent preparation",
+    "Worn garments and optional person masking require the NVIDIA-derived human parser. Its research/evaluation restriction could not be silently treated as the model runtime's license.",
+    "After explicit user consent for local research/evaluation, created an isolated parser environment. Pinned package versions, artifact hashes and a local license copy; required explicit acknowledgement for downloading or using it. The adapter keeps original logits/prediction/masking semantics but loads only local safetensors and prevents implicit network downloads.\n\nApplied original category-to-body-label coverage, garment extraction and clothing-agnostic person masking. The parser-free environment remained separate.",
+    "Exact original parser logits and prepared tensors/crops passed across all 12 category/photo/masking combinations, with network access blocked during checks. The photographic two-step native output differed from PyTorch in 47 full-canvas channels, each by one.",
+    "User consent for research does not grant unrestricted commercial rights. Two steps transferred the shirt but left soft detail and imperfect lettering; quality evaluation was still pending.",
+    source(r"scripts\fashn_parser_eval.py", 20, 37, "Consent and artifact identity are checked explicitly.") +
+    source(r"scripts\fashn_parser_eval.py", 54, 71, "The adapter reuses upstream prediction but requires local-only, F32 CPU model loading."),
+    extra=image(ROOT / r"parser-checkpoint9\native-two-step.png", "Checkpoint 9: real person / worn-garment two-step integration result. A short diagnostic, not the final quality baseline."),
+    evidence=("parser-checkpoint9",))
+
+chapter(10, "Measure whole-process latency and memory",
+    "Without a reproducible baseline, a faster kernel or smaller file could be mistaken for a faster or smaller application. Loading, PNG output and process identity matter.",
+    "Added a Windows benchmark harness with fresh processes, exact argv and executable/model/input/output hashes, wall time, kernel peak working set, sampled private commit, sample count, timeout handling and output-mode/crop checks. Kept process wall distinct from sampling. Later checkpoints added interpreter ownership and phase timelines.",
+    "The initial one-step CFG1, eight-thread F32/manual-attention photographic baseline was 113.03 seconds and 5.896 GiB peak working set.",
+    "Fresh process does not mean cold filesystem cache. Working set is resident memory; private commit is a different metric. Kernel high-water working set and sampled private peaks have different observation guarantees.",
+    source(r"scripts\benchmark_fashn_vton.py", 171, 186,
+           "This current collector preserves both resident and committed counters. Timeline output was introduced later, at checkpoint 31."),
+    evidence=("checkpoint10-manual-baseline",))
+
+chapter(11, "Make flash attention genuinely F32-preserving",
+    "Manual attention materializes large intermediates for 6,912 joint tokens. The first faster flash candidate nevertheless failed the established numerical gate.",
+    "Traced the failure to the shared attention helper casting K/V to F16. F32 accumulation cannot undo that rounding. Added a FASHN-specific option that preserves F32 K/V and retained other models' existing behavior. Required all 28 attention nodes to be actual flash operations, rather than silently advertising a fallback.",
+    "The F16-K/V candidate failed three late captures, max relative L2 0.0011681 against 0.001. The F32-preserving version passed both branches and both times. One-step wall time fell 113.03 to 81.87 seconds; working set fell 5.896 to 4.217 GiB. A photographic two-step result differed from the oracle in only 81 one-level byte channels.",
+    "Enable the optimization only after matching intermediate tensors, not merely because the final image looks plausible. Historical one-step gains are not universal benchmark ratios.",
+    source(r"src\core\ggml_extend.cpp", 573, 595,
+           "The K/V storage types are selected explicitly before flash execution; accumulation precision alone is not enough."),
+    evidence=("reports\\implementation-and-experiment-history.md",))
+
+chapter(12, "Generate the first recommended-fast 20-step photograph",
+    "The previous two-step images were too short to assess intended model behavior. A complete 39-forward trajectory was needed on real inputs.",
+    "Ran the upstream original seated-person / worn-black-shirt example at 20 steps, CFG1.5, shift1.5, skip1 and seed42, with eight CPU threads, F32 residency and the accepted F32 flash path. Preserved input hashes and output evidence. This is the original example tops pair, not the later independent flat-lay cardigan.",
+    "Completed in 2985.95 seconds (49m46s), peaking at 4.222 GiB working set. Lettering, hands, trousers and boots were sharper than in short smoke outputs, while folds, fit and adjacent details were still regenerated.",
+    "A successful 20-step picture did not yet establish all-step numerical correctness. Checkpoint 21 later closed that gap.",
+    example("Exact experimental settings", json.dumps({"steps":20,"cfg":1.5,"shift":1.5,"skip_cfg_last_n_steps":1,"seed":42,"threads":8,"flash_attention":"F32 K/V","matrix_residency":"F32"}, indent=2),
+            "Recorded settings summarized from the benchmark; this is not a standalone CLI argument file."),
+    extra=image(ROOT / r"checkpoint12-photo-20-step\sample-0.png", "Checkpoint 12: first complete 20-step original tops example, approximately 49m46s. Later full-trajectory comparisons establish numerical agreement."),
+    evidence=("checkpoint12-photo-20-step\\benchmark.json",))
+
+chapter(13, "Add request-local progress and active cancellation",
+    "Rejecting cancellation for a running job was inadequate for CPU generations lasting tens of minutes. Global callbacks also risk mixing concurrent clients' state.",
+    "Added a size-versioned callback structure and generate_try_on_with_callbacks. Progress and cancellation data remain request-local and alive until the synchronous native call returns. Server state uses atomics; accepted cancellation wins the completion/encoding race. Cleanup must run for every exit and cancellation must not contaminate the next request.",
+    "Active cancellation and subsequent-request behavior passed. One early cancellation observed after the first step took about 78.42 seconds, consistent with waiting for a model-forward boundary.",
+    "Cooperative cancellation is not immediate kernel interruption. Returning 'cancel requested' does not mean the currently executing attention/GEMM kernel has stopped.",
+    source(r"include\stable-diffusion.h", 538, 550,
+           "The C contract states callback lifetime and forward-boundary cancellation semantics."),
+    evidence=("checkpoint13-active-jobs",))
+
+chapter(14, "Ship a standalone browser interface without changing the frontend submodule",
+    "The C API/CLI/HTTP interfaces needed an accessible local UI, but modifying the independent general-purpose frontend submodule was outside the project boundary.",
+    "Added an embedded /try-on page with prepared-manifest and image uploads, progress, cancellation, PNG downloads and actionable errors. Preserved uint64 seeds as exact decimal text using BigInt instead of lossy JavaScript Number. Transport retry polls an existing job instead of resubmitting it; later lifecycle fixes handle expired/restarted jobs and cancellation races.",
+    "UI route and focused state tests passed. Later actual Chromium coverage exercised the full upload/inference/download path rather than relying solely on mocks.",
+    "A static browser interface is not an authentication layer. Keep the experimental service local. Browser number handling is part of deterministic sampling correctness.",
+    source(r"examples\server\try_on.js", 93, 106,
+           "Large seeds survive JSON serialization without rounding away low bits."),
+    evidence=("checkpoint14-ui-routes",))
+
+chapter(15, "Replace deployed Python preparation with native OpenCV/ORT",
+    "A C++ transformer behind Python preprocessing would not satisfy a genuinely Python-free deployed workflow. The image transforms also had to reproduce the original pixel conventions exactly.",
+    "Built optional sd-fashn-prepare with OpenCV and ONNX Runtime. Ported Pillow-compatible Lanczos3 initial fitting with no upsampling, truncation, 22-bit coefficients and intermediate uint8 clipping; final OpenCV area/Lanczos4 resize, nearest-exact pose resize, YOLOX/RTMPose execution, original neck/visibility mapping and grayscale pose rendering. Exported an authorized fixed-shape parser ONNX with model/license provenance.\n\nAn OpenCV parser-logit resize changed a boundary argmax label. Replaced that interpolation with explicit Torch-compatible F32 half-pixel bilinear arithmetic rather than accepting a pixel mismatch.",
+    "All 12 preparation combinations, primitive transforms and failure paths matched the pinned reference. Later quality preparations likewise matched all four condition PNGs and crop geometry exactly.",
+    "The native path contains learned detector/parser inference via ONNX Runtime, not a rewrite of those networks' training or every numerical dependency. Exact logits-to-label interpolation can matter even when the numeric difference is tiny.",
+    source(r"examples\fashn-preprocess\preprocess.cpp", 334, 355,
+           "The logits are interpolated before argmax using controlled F32 ordering, avoiding the observed boundary-label flip."),
+    evidence=("checkpoint15-native-final", "checkpoint15-native-regression"))
+
+chapter(16, "Separate lower-precision storage from lower-precision arithmetic",
+    "F32 parameter residency was expensive. Conversion support and a small model file did not prove that reduced-precision matrix arithmetic would preserve FASHN outputs.",
+    "Added and verified F32/F16/BF16 GGUF conversion and selective Q8 diagnostics across all 366 file tensors. Defined 104 eligible core matrices, excluding embeddings, patch kernels, modulation, normalization, biases and the final layer. Compared direct arithmetic against the synthetic full-canvas stress oracle.\n\nThe accepted compromise stores eligible matrices in BF16/F16 and casts each to F32 immediately before multiplication; protected parameters stay F32. No permanent full-model F32 copy is required. All 146 pre-cache matrix multiplies request F32 compute precision.",
+    "Direct F16 failed 6/34 captures (max L2 0.002438); BF16 failed 9/34 (0.013573); Q8 failed 19/34 (0.064830). F32 upcasts of BF16/F16 storage passed both probe sets. BF16 one-step pixels were exact; F16 differed in 29 one-level channels. BF16/F32 one-step working set was about 2.950 GiB versus 4.217 GiB F32 residency.",
+    "CPU quantized dot products also quantize/round activation operands. Accumulating in F32 cannot recover precision already discarded. File conversion success is not public inference acceptance.",
+    source(r"src\model\diffusion\fashn_vton.h", 49, 55,
+           "Eligibility is limited to core 2D block-aligned weights; it does not broadly quantize every parameter."),
+    extra=table(["Export policy","File bytes"], [["F32","3,887,290,272"],["BF16 / F16","1,943,661,792 each"],["Selective Q8 / protected F32","1,808,160,672"]]),
+    evidence=("checkpoint16-conversion",), status="Storage accepted; direct arithmetic rejected")
+
+chapter(17, "Share native preparation with raw-image HTTP jobs",
+    "Separate CLI/server preprocessing implementations could drift. HTTP also needs tighter image bounds and ownership than an offline command-line tool.",
+    "Extracted a reusable Preparer and wired raw person/garment uploads into the existing worker. Added capability gates, category/photo/masking options and preparation cancellation. Decode performs RGB/BGR conversion and binds owned prepared image buffers to the same C API request; there is no Python subprocess, network download or HTTP temporary-file workflow.\n\nHTTP limits include 4,194,304 decoded pixels, dimensions at most 4096 and a 3 MiB encoded-string cap. Queued requests retain encoded images, not large decoded arrays. Standalone preparation allows 20 MP. EXIF orientation is intentionally not applied, matching the reference.",
+    "Raw HTTP, native-prepared and Python-prepared outputs agreed pixel-for-pixel under the exercised settings. Shared preparation and installed-preparer coverage passed.",
+    "Compile-time SDK support and configured runtime models are separate capabilities. A core-only server must reject raw input clearly while retaining prepared-input inference.",
+    source(r"examples\server\try_on_preprocessing.cpp", 37, 58,
+           "The worker decodes bounded input and calls the same native preparer. Explicit raw-string capacity release was strengthened at checkpoint 37."),
+    evidence=("checkpoint17-shared-preparer", "checkpoint17-raw-server", "checkpoint17-installed-preparer"))
+
+chapter(18, "Exercise the real browser, not only UI mocks",
+    "A route test cannot prove file upload controls, image decoding, downloads and cancellation work in an actual browser.",
+    "Created an isolated Playwright/Chromium environment and drove the real /try-on page against a local server. Uploaded real images, selected raw mode, generated and downloaded a PNG, and exercised cancellation. Captured page errors and blocked/logged requests outside the local test origin. Kept focused Node state-race tests as complementary coverage.",
+    "The browser-generated image matched the CLI, with no page errors or external browser requests. Upload, inference, image decode, download and cancellation passed.",
+    "Real-browser coverage is stronger than a mocked DOM, but remains a bounded local workflow test, not cross-browser production certification.",
+    source(r"scripts\test_fashn_vton_browser.py", 57, 84,
+           "The test routes network access, records page errors and interacts with real file inputs and downloads."),
+    evidence=("checkpoint18-browser",))
+
+chapter(19, "Make backend capabilities and rejection observable",
+    "CPU success cannot establish GPU support. Unsupported operations, hidden fallback or silently changed precision must be visible before backend promotion.",
+    "Added explicit backend listing/selection, operation-support checks and precision reporting to diagnostics. Verified CPU primitives and full-graph reference probes. Kept the public one-CPU-backend guard because this VM has no compute GPU. The later software-BLAS route has an explicit CPU fallback and remains diagnostic-only.",
+    "CPU backend probes passed at both reference times. GPU validation remained hardware-blocked; no CUDA/Vulkan/ROCm performance or correctness claim was made.",
+    "Enumerating a backend is not executing the entire FASHN graph correctly on it. A device classified as ACCEL can also be a CPU software BLAS backend, so capability needs more than a device label.",
+    source(r"src\model\diffusion\fashn_vton_model.h", 214, 226,
+           "Current operation support includes the later explicit BLAS fallback; public GPU support was not enabled by this diagnostic extension."),
+    evidence=("checkpoint19-backend-step0", "checkpoint19-backend-step15"), status="CPU delivered; GPU blocked")
+
+chapter(20, "Package optional SDK support and prove core-only operation",
+    "A build that works only because the development shell contains SDK DLLs is not a reproducible deployment. Prepared inference should not require OpenCV/ORT.",
+    "Built SDK-enabled and dependency-free variants. Added install rules for the native preparer, required ORT/OpenCV DLLs, notices and licenses, but no model weights. Tested installed preparation with only its bin directory and Windows System32 on PATH. Tested the dependency-free server with System32-only PATH and explicit capability differences.",
+    "Installed preparation, core-only prepared inference, parser-free server and clean-PATH lifecycle checks passed. Optional SDK availability is documented in the library/CLI/server/browser contracts.",
+    "Packaging must include dependency licenses and reject unavailable raw preparation explicitly. Research parser models and consent remain separately provisioned.",
+    source(r"examples\fashn-preprocess\CMakeLists.txt", 47, 59,
+           "Install rules package executables/notices rather than redistributing model weights."),
+    evidence=("checkpoint20-installed-prepared", "checkpoint20-no-sdk-clean-path", "checkpoint20-no-sdk-server"))
+
+chapter(21, "Close the full 20-step numerical correctness gap",
+    "Matching two steps and a final 20-step image was insufficient. Small velocity errors can compound, and a visually similar final image can hide a bad intermediate trajectory.",
+    "Added recording around the actual native sampler, saving initial noise and all twenty updated images/guided velocities. Shared runner/export helpers avoid a second approximate sampler. The comparator validates provenance, schedule, initial noise and every state, using original-model F32/MATH reference trajectories. Observer failures abort generation. Verified a one-step recorder against the public CLI before relying on it.",
+    "At eight and sixteen native threads, all trajectory gates passed. Initial noise max error was 4.76837e-7; schedule error zero. Max updated-image relative L2 was 1.37657e-6 and guided velocity 1.44126e-6 against a 0.001 per-state gate. Final full-canvas PNG differed in 101 one-level channels, numerical PSNR 89.8282 dB.",
+    "This establishes floating numerical agreement for the recorded conditions, not product fidelity. The original-model MATH oracle is distinct from the unchanged upstream default sampler benchmark introduced at checkpoint 27.",
+    source(r"scripts\compare_fashn_trajectories.py", 20, 32,
+           "Relative L2 is evaluated over the tensor; the full comparator separately enforces initial-noise and schedule limits.") +
+    source(r"src\runtime\fashn_vton_sampling.h", 156, 166,
+           "The observer is attached to actual sampling, and its failure cannot leave a success-shaped trajectory."),
+    evidence=("checkpoint21-reference-20-step", "checkpoint21-native-20-step", "checkpoint21-native-20-step-t16"))
+
+quality_rows = [
+    ["Unmasked cardigan, seed42", "2549.62", "Graphic distorted; hem/front opening reinterpreted"],
+    ["Masked cardigan, seed42", "2410.98", "Better lower coverage; sleeves bunch/expose forearm"],
+    ["Floral dress, seed42", "2382.17", "Colors/flowers recognizable; neckline/straps/motifs altered"],
+    ["Worn beige trousers, seed42", "2491.28", "Construction simplified/tight; white top shortens"],
+    ["Patterned crochet top, seed42", "2541.91", "Pattern bands retained; stitches/closure altered"],
+    ["Unmasked cardigan, seed43", "2487.24", "Neckline/closure change; undershirt disappears"],
+]
+quality_figures = "".join(image(ROOT / "checkpoint22-quality-t16" / (name + "-review.jpg"), caption)
+    for name, caption in [
+        ("flat-top-free", "Quality case: unmasked cardigan, seed42. Inputs, preparation and generated output from the saved review."),
+        ("flat-top-masked", "Quality case: masked cardigan. Masking changes coverage but is not uniformly better."),
+        ("flat-dress-free", "Quality case: floral dress. Appearance agreement is not exact construction transfer."),
+        ("worn-bottoms-free", "Quality case: worn trousers. Later reference attribution reproduces the same visible limitations."),
+        ("worn-top-free", "Quality case: patterned worn crochet top."),
+        ("flat-top-seed43", "Quality case: seed43 cardigan. This is seed variation, not fixed-seed nondeterminism."),
+    ])
+chapter(22, "Establish a six-case photographic quality baseline",
+    "The original example and synthetic fixtures were too narrow. A faithful port still needed explicit visual evidence over categories, masking and a different seed.",
+    "Built a resumable quality driver with pinned public CatVTON demo assets, hashes, license acknowledgement, interrupted-run archiving and separate execution/visual-review states. Five distinct preparations serve six generated cases. Each resume checks executables, model, source images, policy and settings; one completed invocation does not mark the entire suite complete.\n\nThis checkpoint was staged and resumed around the thread and reliability studies at checkpoints 23-24. The final suite uses the sixteen-thread configuration selected there. Checkpoint numbers identify workstreams/milestones, not fabricated per-commit or strict wall-clock timestamps.",
+    "All five preparations matched independent original Python outputs exactly. Six 20-step BF16-storage/F32-flash runs took 14,863.21 seconds total (about 4h08m), median 2489.26 seconds and approximately 2.957 GiB peak working set each. The observed visual limitations are recorded case by case below.",
+    "This small unpaired set has no target worn-image ground truth: no FID/SSIM product-quality claim is justified. Recognizable face/pose is not identity verification, and regenerated visible anatomy is not evidence about previously hidden anatomy. Masking and seed choice change garment styling materially.",
+    source(r"scripts\run_fashn_quality.py", 88, 110,
+           "The fingerprint and explicit execution/visual states prevent a resumed or partial suite from silently changing its conditions."),
+    extra=table(["Case","Process wall seconds","Visual finding"], quality_rows) + quality_figures,
+    evidence=("checkpoint22-quality-t16\\suite.json", "checkpoint22-quality-t16\\visual-review.json", "checkpoint22-quality-reference-preparation"))
+
+chapter(23, "Choose CPU threads and reject an unnecessary kernel switch",
+    "The initial eight-thread setting was not necessarily optimal for the VM's sixteen logical CPUs. Kernel-level profiling was useful, but had to be separated from clean latency measurement.",
+    "Added per-node timing through supported backend callbacks and explicitly labeled it intrusive: synchronization prevents some cross-node optimizations. Benchmarked a separate LLAMAFILE-enabled build against default kernels without editing GGML. Used serial fresh processes, two repeats, identical one-step CFG1 inputs and a fixed one-byte pixel gate, followed by full sixteen-thread trajectory acceptance.",
+    "Instrumented eight-thread conditional/null work showed approximately 46.22/45.50 seconds in 146 matrix multiplies, 19.93/19.29 in 28 flash nodes and 13.37/10.62 in 36 tanh operations. Clean median wall times: default 4t 111.71s, 8t 75.24s, 16t 63.17s; LLAMAFILE 8t 69.26s and 16t 63.14s. Memory remained about 2.950 GiB.",
+    "Selected default kernels at sixteen threads because LLAMAFILE added no meaningful benefit there. Intrusive node times must not be added up as normal runtime or used to claim a causal decomposition of the full pipeline.",
+    source(r"scripts\run_fashn_cpu_study.py", 24, 48,
+           "The study fixes workload and output criteria and saves each configuration before accepting its pixels."),
+    evidence=("reports\\implementation-and-experiment-history.md",), status="16 threads selected; kernel change not adopted")
+
+chapter(24, "Harden restart, shutdown, concurrency and retained results",
+    "Long-running jobs, listener races and stale browser state can leave a local service unreliable even when individual images are correct.",
+    "Added FASHN-specific cooperative signal handling: handlers set a lock-free atomic; a normal monitor stops admission, cancels queued jobs, requests active cancellation, stops the listener and joins the worker. Fixed a race where httplib stop() did nothing before the listener was running. Failed binds exit nonzero; shutdown publication is guarded and returns 503.\n\nAdded a random 128-bit process namespace to job IDs so restarts do not ordinarily reuse IDs. Old jobs are not durable. Browser 404/410 releases stale jobs; network errors retain the polling path; cancellation responses cannot discard a newer job. TTL-aware memory accounting separates retained results from suspicious growth.",
+    "A six-request/seven-image run preserved pixels and sample semantics. Sixteen queued jobs submitted/cancelled by eight clients succeeded. Adjusted post-warmup private span was 562,008 bytes versus a declared 128 MiB budget. Busy shutdown took 73.156 seconds. Real restart/old-job404, failed bind and idle shutdown passed in SDK and core-only builds.",
+    "This bounded soak is not proof of indefinite leak freedom. IDs are not authentication tokens; queues are not durable. Shutdown still waits for an active forward.",
+    source(r"examples\server\main.cpp", 206, 223,
+           "The monitor waits for actual listener state and joins before shutdown returns, avoiding the startup/stop race."),
+    evidence=("reports\\implementation-and-experiment-history.md",))
+
+chapter(25, "Attribute the trouser failure to the matched reference path",
+    "The generated trousers lost tailored construction and shortened the top. Before 'fixing the port,' we needed to determine whether native inference introduced those visible failures.",
+    "Ran a matching original-model F32/MATH 20-step reference on the exact photographic conditions. Verified checkpoint, schedule/settings, prepared PNGs, normalized tensors, output artifact hashes and tensor-to-PNG conversion. Applied the exact x0/y48/576x768 native crop and inspected both outputs and their difference.",
+    "Only 43 of 1,327,104 cropped RGB channels differed, each by one byte level; MAE 0.0000324014. The same simplified/tight trousers and shortened white top appeared in the reference.",
+    "These particular failures are not a native-specific output discrepancy. The experiment does not separate model behavior from preprocessing effects, and final-image parity is not a separate all-intermediate-state proof.",
+    source(r"scripts\compare_fashn_case_output.py", 68, 88,
+           "Reference artifact hashes, float rendering, native output identity and explicit cropping are checked before comparing pixels."),
+    evidence=("checkpoint25-bottoms-reference", "checkpoint25-bottoms-comparison"))
+
+chapter(26, "Generate complete Q8 images instead of stopping at failed captures",
+    "The earlier 19/34 failed synthetic captures established disagreement, but not what complete quantized images look like. The user explicitly requested full generation before further surgical restoration.",
+    "Extended only the diagnostic trajectory runner to accept direct Q8 for all 104 eligible matrices, keeping protected parameters F32 and public guards intact. Recorded the actual type map, all states and final pixels. Added exact-name restoration policies with duplicate/unknown/protected-name rejection and a separate Q8-weight/F32-compute diagnostic control.\n\nCompleted bottoms and independent-cardigan Q8 images. A later matched BF16/F32 recorder control used the same executable/settings and reproduced historical CLI pixels, avoiding a recorder-versus-CLI timing confound.",
+    "Q8 bottoms wall time was 1947.35s / 4.151 GiB; cardigan 1956.68s / 4.164 GiB. Cropped MAE/max byte error was 0.130162/41 bottoms and 0.258655/83 cardigan. Both looked broadly similar at normal scale but failed strict trajectory agreement. The matched floating bottoms recorder took 2640.87s / 3.461 GiB.",
+    "Q8 was faster in those observations but paradoxically used more measured memory. That was an unresolved loading/residency issue at this point, not a reason to pretend a smaller file proved lower RAM. Checkpoints 31-33 later explained and fixed it.",
+    example("Selective precision, conceptually",
+            'for name, tensor in checkpoint:\n    if eligible_core_matrix(name, tensor):\n        runtime_type = Q8_0\n    else:\n        runtime_type = F32\n# Generate all steps in the diagnostic runner.\n# Execution success and floating-equivalence acceptance are separate.',
+            "Conceptual policy sketch. The concrete eligibility implementation is shown at checkpoint 16."),
+    extra=image(ROOT / r"reports\comparison-gallery-optimized\cardigan-q8-floating\side-by-side.jpg",
+                "Cardigan floating versus Q8. These Q8 pixels were preserved exactly by the later memory optimizations; this illustrates the original complete-image precision difference."),
+    evidence=("checkpoint26-q8-bottoms", "checkpoint26-q8-cardigan", "checkpoint26-bf16-bottoms-control"), status="Images generated; numerical gate failed")
+
+chapter(27, "Compare the unchanged upstream sampler and correct Windows PID measurement",
+    "The numerical oracle forced F32/MATH attention and sequential CFG. Calling its timing 'original Python performance' would be misleading; we needed the actual unchanged _sample path.",
+    "Invoked the pinned TryOnPipeline._sample with default SDPA dispatch and batched CFG. Bypassed only raw-preparation/model-constructor setup, using meta-device loading; the timing is prepared-input sampling, not raw __call__. Matched images, categories, seeds and schedule.\n\nThe first Python memory result mistakenly monitored the Windows venv launcher rather than the interpreter. Retained the invalid evidence with an explicit correction. Added an interpreter PID registration/acknowledgement worker, parent-child ownership validation and runpy dispatch before model work starts. A real 32 MiB allocation regression proves the monitored process owns the allocation. Timeout cleanup uses owned-process snapshots/handles and creation-time checks rather than trusting unreliable loaded-system taskkill behavior.",
+    "Original Python wall time: cardigan 1258.0365s (1241.3262s sampling/PIL), bottoms 1325.4767s (1263.7368s sampling/PIL). Earlier native CLI: 2549.6227s / 2491.2815s. Final outputs differed in 69/44 cropped channels, each by one. Valid bottoms Python peak was 7,057,371,136 bytes = 6.573 GiB versus native 2.957 GiB; Python sampled private commit was 10,310,897,664 bytes.",
+    "Python was faster; native used less memory in the valid bottoms observation. The approximately 11.7 MB cardigan launcher reading is invalid model-memory evidence. Historical single runs do not establish an intrinsic language-level speed ratio. An acknowledgement-placement bug and an overly short startup allowance were corrected; no broad silent retry was introduced.",
+    source(r"scripts\run_fashn_upstream.py", 44, 57,
+           "The sampler call is upstream's original method. Only constructor setup is bypassed.") +
+    source(r"scripts\benchmark_fashn_vton.py", 160, 170,
+           "The parent attaches memory measurement to the registered interpreter and acknowledges ownership before model execution."),
+    extra=image(ROOT / r"reports\comparison-gallery-v6\cardigan-upstream\side-by-side.jpg",
+                "Historical actual original-Python versus native floating cardigan comparison, not the forced-MATH timing oracle."),
+    evidence=("checkpoint27-upstream-cardigan", "checkpoint27-cardigan-comparison-v2", "checkpoint27-bottoms-comparison"))
+
+chapter(28, "Measure all 104 individual matrix-restoration interventions",
+    "Large downstream layer error does not identify which weight matrix caused it: drift propagates. Restoring every late block would waste the memory benefit and obscure causal evidence.",
+    "Created a serial, resumable one-matrix-at-a-time study on photographic bottoms conditions. Each intervention restores original floating values for exactly one eligible matrix, leaving the others Q8. Validated actual precision maps and complete branch captures. Ranked by the worst conditional/null final-velocity relative L2, with hashes and explicit completed numerical rejection distinct from a crash.",
+    "All 104 interventions completed. The first eight patch-mixer restorations helped at best 0.044%; six slightly worsened the objective. At 40/104, the best gain was only 0.17025%. The full scan found single_blocks.12.linear1.weight: a 40.6711% reduction, at 32.129 MiB additional payload, still failing strict acceptance.",
+    "A single-restoration effect is conditional on all other matrices being quantized. It is not independent causal importance and does not prove that adding the top-ranked matrices combines linearly or generalizes to another state.",
+    source(r"scripts\run_fashn_matrix_ablation.py", 13, 39,
+           "The objective is downstream velocity agreement, and actual type/capture completeness is checked before ranking."),
+    evidence=("checkpoint28-matrix-ablation", "reports\\matrix-sensitivity-complete"), status="104 interventions complete")
+
+chapter(29, "Test small combinations at initial and real late states",
+    "Single-matrix rankings can interact or overfit the initial noisy state. We needed joint interventions and a genuine intermediate reference image, not fresh noise merely labeled as step15.",
+    "Tested top1, top2, top4 and a branch-aware pair, plus fresh all-Q8 and Q8-weight/F32-compute controls at two states: twelve probes total. Step15 consumes the actual reference step14 updated image with verified lineage. Exact restored values come from the original checkpoint, never dequantized Q8. This is teacher-forced local-state analysis, not free-running mixed sampling.",
+    "Top4 (single-block linear1 weights 12,11,8,14) reduced worst-branch velocity L2 from 0.0026250719 to 0.0012749801 initially (51.43%) and 0.0034749969 to 0.0012152331 at step15 (65.03%). It adds 128.516 MiB and leaves 100 Q8 matrices. Weight-only Q8/F32 compute reached 0.0010505147 / 0.0010230602, but still failed 16/34 captures at both states. Top4 failed 17/34 and 20/34.",
+    "No candidate passed the unchanged full capture gate. Weight-only dequantization cannot reconstruct original weights, and a teacher-forced late-state improvement is not yet a full-image result.",
+    source(r"scripts\evaluate_fashn_precision_policies.py", 20, 28,
+           "Exact-name policy validation rejects duplicate or ineligible restorations.") +
+    example("Real-state probe lineage", "step15_input = load(reference / 'step-14.safetensors')['image']\nt = verified_reference_schedule[15]\n# Evaluate conditional and null branches on this same reference state.\n# Do not substitute newly seeded noise.", "Explanatory sketch of the teacher-forced experiment, not a free-running trajectory."),
+    evidence=("checkpoint29-policy-evaluation",), status="Combinations improve error; gates still fail")
+
+chapter(30, "Freeze the four-matrix policy and run two full mixed images",
+    "Local-state improvements could disappear during accumulated free-running sampling. The independent cardigan must be evaluated without retuning the bottoms-selected policy.",
+    "Froze original-value F32 restorations for single_blocks.{12,11,8,14}.linear1.weight and ran complete bottoms and cardigan trajectories. Built image/tensor rendering with finite-F32 checks, exact clipping/truncation/crop, numerical metrics and source hashes. Completed the matched floating recorder and full-image evidence snapshot rather than inventing a missing cardigan reference trajectory.",
+    "Mixed bottoms: 2007.3931s / 4.277 GiB, MAE 0.05832625 versus Q8 0.13016237 (55.19% lower), max error 30 versus 41. Mixed cardigan: 1975.8638s / 4.304 GiB, MAE 0.19067760 versus 0.25865494 (26.28% lower), max 82 versus 83. The cardigan boundary peak remained at cropped x184/y524; pixels above 16-level error fell only 336 to 328, and above 32 only 285 to 278.",
+    "Mixed improved averages but did not remove the sleeve/torso-gap error, hem and neckline differences. Bottoms still failed four image states and all twenty velocities. Public Q8 stayed gated; the policy is useful, not proven minimal or broadly validated. At this historical stage there was no full floating cardigan intermediate recording; checkpoint 38 later added a native one, not a Python oracle.",
+    example("Frozen policy", text(ROOT / r"reports\matrix-sensitivity-complete\candidate-top4.json"),
+            "Exact saved policy JSON; original-value F32 restorations, not dequantized approximations."),
+    extra=image(ROOT / r"reports\comparison-gallery-optimized\cardigan-mixed-floating\difference-x32.png",
+                "Mixed versus floating cardigan absolute difference amplified 32x. Concentrated boundary error survives the improved average; these pixels remain identical after the loading optimizations."),
+    evidence=("checkpoint30-mixed-top4-bottoms", "checkpoint30-mixed-top4-cardigan", "reports\\full-image-precision-summary.json"),
+    status="Independent full images; quality guard retained")
+
+chapter(31, "Explain why Q8 appeared to use more memory",
+    "The matched recorder showed Q8/mixed using more RAM than floating despite smaller weights. The user asked for an investigation and plan before another implementation pass.",
+    "First wrote the memory/latency plan from source and existing evidence. Then added opt-in loader read/F32 scratch counters, real parameter-buffer capacities, source mapping inspection, graph lifecycle events, Windows process counters and selected-boundary resident-page classification. Backend-private allocations without supported queries remain unknown, not folded into a fictitious graph total.\n\nRan sixteen original-checkpoint load-only combinations, then four same-input warm mmap controls and floating/sampler correctness checks. Did not flush shared-machine caches or assume untouched mmap pages were already resident.",
+    "Mapped original-to-Q8 loading retained 1,943,633,920 resident source bytes alongside 1,808,125,632 destination bytes. Accounted simultaneous conversion scratch peaked at 881,049,600 bytes with sixteen loading workers. Warm Q8 mmap on/off peaks were 4.1161 / 2.3058 GiB; corresponding BF16/F32 peaks 3.4256 / 2.9337 GiB. Same-policy velocities were bit-identical.",
+    "The reversal was duplicated source/destination residency plus conversion pressure. Private commit excludes some mapped-file residency, so it cannot be subtracted from RSS to derive mapped RAM. Independent peak categories need not occur simultaneously.",
+    source(r"src\core\load_diagnostics.h", 8, 20,
+           "Live and peak counters are separate and atomic; the event observer is nonthrowing and cannot mutate the loader."),
+    extra=table(["Warm original-file control","Peak working set GiB"], [
+        ["BF16/F32, mmap off","2.9337"],["BF16/F32, mmap on","3.4256"],
+        ["Q8/F32, mmap off","2.3058"],["Q8/F32, mmap on","4.1161"]]),
+    evidence=("reports\\memory-and-latency-optimization-plan.md", "reports\\checkpoint31-memory-attribution.md"))
+
+chapter(32, "Load an already matching runtime precision policy",
+    "The simplest fix was to quantize once and load the intended representation, not redesign the generic loader's ownership/conversion machinery.",
+    "Reused selective-Q8 GGUF and exported policy-matched BF16-core/F32-protected and mixed files through the existing converter. Added a wrapper that builds exact suffix-anchored rules from the actual 104-matrix map and a verifier that checks all 366 shapes/types, protected/restored original values and exact Q8 blocks. Two export workers bound one-time conversion memory. A uniform BF16 file is not the same policy as BF16 core with F32 protected parameters.",
+    "Ready Q8 short-forward peak was 2.3059 GiB versus original mapped Q8 4.1161 GiB, with zero runtime conversions/scratch. Ready BF16/mixed peaks were 2.9338/2.4313 GiB. All three policies matched original same-policy velocities exactly. BF16 export took 11.970s / 85.625 MiB peak; mixed 9.437s / 141.059 MiB.",
+    "Mapped ready files contain the runtime representation itself, rather than a second original precision copy. The later modulation-cache path uses mmap off to release weights safely. Because ready files solved the measured problem, generic chunked conversion and broad loader-lifetime refactoring were not implemented.",
+    source(r"scripts\export_fashn_runtime_weights.py", 12, 32,
+           "Rules derive from the validated matrix inventory, preserve protected tensors and reject ambiguous restorations."),
+    evidence=("reports\\checkpoint32-runtime-ready-weights.md",))
+
+chapter(33, "Trade modulation matrices for a bounded vector cache",
+    "About a gigabyte of protected parameters computes values that depend only on timestep/category, not the person, garment, pose or noisy image. Caching without releasing those matrices would only add memory.",
+    "Enumerated 37 modulation projections plus time/category conditioning. Compute required exact F32 time/category pairs layerwise, copy their small outputs, release that layer's storage, and exclude retired parameters from denoising allocation. Reuse supplied-modulation paths in the blocks and add the final-layer route.\n\nImplemented exact bit keys, arithmetic/thread matching, bounded request windows, cancellation/partial cleanup, multi-sample reuse and callback cleanup. Default cache ceiling is 128 MiB; a 1 MiB test forces refills mid-CFG and between samples. Public opt-in uses existing model_args, rejects mmap/eager-load conflicts and adds no C ABI fields.",
+    "Retired conditioning/modulation payload: 1,044,172,800 bytes; 39 cache entries: 32,148,480 bytes. Cached BF16/Q8 short-run peaks were 1.975945/1.363804 GiB with exact same-policy outputs. A complete floating trajectory passed at 2577.729s / 2.009415 GiB. All 37 projections and conditioning captures were exact at times 0,0.4,0.8 and all categories. Both forced-window public samples matched uncached pixels; tiny-window wall time was about 4.4% slower.",
+    "This is primarily a residency improvement, not a proven speedup. The implemented 206,080 F32 values per pair include debug conditioning captures and supersede the plan's 202,240-value estimate. The cache is keyed to the runner/model instance and request; adapters remain unsupported.",
+    source(r"src\model\diffusion\fashn_vton_model.h", 348, 368,
+           "After each projection layer, storage is reset/released. The cache is marked complete only after all values and cleanup succeed.") +
+    source(r"src\model\diffusion\fashn_vton_model.h", 372, 383,
+           "Bounded windows prevent long schedules from allocating an unbounded cache."),
+    evidence=("reports\\checkpoint33-modulation-progress.md",))
+
+chapter(34, "Fuse strict GELU, but keep the modest result honest",
+    "The correct F32 GELU expression contained several graph operations and memory passes. Fusion was an opportunity, not proof that all intermediate activations were simultaneously live.",
+    "Added a threaded stride-aware custom GGML operation that preserves the same tanh formula and F32 rounding boundaries, including slices inside 8960-wide QKV/MLP storage. The first volatile-scalar implementation was correct but slower in dense microbenchmarks. A VS2022 scoped precise-floating mode improved it while portable builds retain explicit rounding barriers.\n\nStrengthened primitive tests to mix signs in small strided views, covering row gaps, transposes and 4D layouts. Kept fusion opt-in and other model defaults unchanged.",
+    "Graph nodes fell 2948 to 2696, but the arena stayed exactly 600,355,904 bytes. A-B-B-A warm medians were 66.4127s ordinary / 65.6049s fused, a 1.22% difference with overlapping ranges. Full fused inference took 2507.495s / 2.012066 GiB and all 21 state files were byte-identical to unfused cached inference.",
+    "No memory win was observed: GGML already reused the apparent temporaries. A wrapper initially passed a native recording to a Python-manifest comparator; generation had succeeded. Corrected analysis without rerunning inference. Do not claim the separate full-run 2.7% difference as a robust universal gain.",
+    source(r"src\core\strict_gelu.h", 7, 45,
+           "The arithmetic and stride-aware row partitioning are explicit; this is not a new lower-accuracy tanh approximation."),
+    evidence=("reports\\checkpoint34-gelu-progress.md",), status="Exact opt-in; no arena saving")
+
+chapter(35, "Use supported OpenBLAS with explicit CPU fallback",
+    "GEMM dominated clean throughput, and PyTorch had MKL/oneDNN while the native baseline had no BLAS. A supported backend comparison was more justified than guessing at low-level kernels.",
+    "Installed verified official OpenBLAS 0.3.34 LP64 x64 and built it through GGML's supported BLAS integration in a separate build directory. Required F32 operands and explicit thread configuration; did not borrow PyTorch-private DLLs or silently turn direct Q8 into F32 SGEMM. Used the existing scheduler for CPU-only attention/norm/GELU operations.\n\nThe first full graph failed its 28-flash-node guard because attention construction checked only primary BLAS, not CPU fallback. Passed an explicit fallback device through the shared helper, with null defaults for other callers. Added real-shape GEMM/attention measurements, actual matrix-backend counts and shared-workspace accounting.",
+    "All 107 denoising matrix multiplies dispatched to BLAS. All 34 captures and full original-tops/bottoms trajectories passed. Matched warm CPU/BLAS medians: 62.5503/42.1245s, 32.65% less time; same 600,355,904-byte arena. Complete BLAS tops/bottoms sampling: 1623.947/1615.263s, about 2.029 GiB working set, reference final PNG differences 99/39 full-canvas channels by one.",
+    "Those CPU controls used the same BLAS-capable binary and already had about 4.00 GiB private commit versus 4.20 GiB on BLAS. Checkpoint 38's separate no-BLAS CPU control exposed the DLL startup cost shared by that earlier comparison. Sixteen threads per backend is not a sixteen-OS-thread process cap.",
+    source(r"src\model\diffusion\fashn_vton_model.h", 197, 211,
+           "BLAS is explicitly configured as CPU software acceleration with F32 arithmetic and a supported thread setter."),
+    evidence=("reports\\checkpoint35-blas-progress.md", "checkpoint35-full-acceptance\\results.json"),
+    status="Diagnostic throughput path accepted")
+
+chapter(36, "Evaluate CFG batching and extra caches, then decline them",
+    "Original Python batches conditional/null branches, but copying that structure could double activations without improving the supported BLAS backend. Existing workspace reuse also needed to be distinguished from missing caching.",
+    "Added sequential / real B=2 / flattened-token GEMM controls with independent branch values and a 1 GiB individual-matrix workspace ceiling. Added paired-attention isolation tests at both authentic token counts. Measured graph construction and estimated the scale of a garment-embedding cache.\n\nThe BLAS backend loops over true batch members into separate SGEMMs; batch-to-token flattening is a separate transformation that must be undone before attention. Full-model B=2 would require coordinated category, position, capture, modulation and output changes, not merely a larger batch dimension.",
+    "Branch outputs were bit-identical, but GEMM workspaces increased approximately 1.77-1.87x without consistent speed benefit. At 6912 tokens, paired attention took 1.2247s versus sequential 1.1904/1.1750s, with workspace doubling. Graph construction was only about 20-27ms of a 42-second forward. Two garment embeddings would retain another 35,389,440 bytes.",
+    "Full-model B=2 and extra image caches were not implemented or claimed validated. Static positions/workspace reservations already had reuse; deeper garment states depend on image/time and cannot be cached between steps. Rejecting an unjustified optimization is a completed evaluation checkpoint.",
+    source(r"tests\test_fashn_math.cpp", 150, 179,
+           "The test verifies independent branch outputs and records workspace rather than treating a synthetic batched kernel as a full-model result."),
+    evidence=("reports\\checkpoint36-cfg-and-reuse.md",), status="Evaluated; runtime candidates not adopted")
+
+chapter(37, "Reduce preparation residency and bound service image storage",
+    "Parser-free requests should not pay for an unused parser session. ORT arenas can retain substantial buffers, and a count-only queue limit does not bound retained image bytes.",
+    "Made parser session creation lazy while preserving startup consent/license/model-manifest checks, resolving the directory at startup and rehashing artifacts before delayed load. Configured capability remains true before the session is resident; ONNX session-construction errors intentionally move to first use.\n\nMeasured ORT thread, arena and spinning combinations; selected opt-in arena disabling with original eight threads/spinning. Added a 512 MiB aggregate image-storage reservation budget alongside 64 pending jobs and TTLs. Admission reserves raw/prepared transition and up to 4 MiB output-string capacity per sample. Active reservations are stable while workers mutate storage; terminal charges use retained capacities. Raw strings swap empty to release capacity.",
+    "Lazy startup saved about 444 MiB; after parser-free preparation about 447 MiB. All sixteen lifecycle images and twelve preparation modes stayed exact. Warm preparer working set fell about 1596 to 661 MiB with arenas disabled. Final combined service acceptance passed seven checks, no skips. End-of-soak private commit fell 4,707,848,192 to 3,179,429,888 bytes; adjusted span 884,088 bytes. Byte admission rejected further work after 24 queued four-sample jobs at 516,912,790/536,870,912 bytes. Cancellation freed capacity and readmission succeeded.",
+    "Lazy loading defers work; first parser use can be slower and may surface ONNX construction errors. Arena disabling is opt-in. The byte budget covers image storage, not models, ORT, metadata, graph workspaces or transient HTTP copies. Shutdown still took 74.67 seconds at a forward boundary.",
+    source(r"examples\fashn-preprocess\pipeline.cpp", 46, 58,
+           "Delayed loading revalidates artifact integrity against the startup manifest.") +
+    source(r"examples\server\async_jobs.cpp", 98, 120,
+           "Admission uses an aggregate reservation and subtraction-based capacity check under the manager lock."),
+    evidence=("reports\\checkpoint37-preparation-progress.md", "checkpoint37-server-budget-soak\\report.json"))
+
+final = json.loads(text(ROOT / r"checkpoint38-integrated\final-summary.json"))
+acceptance = json.loads(text(ROOT / r"checkpoint38-integrated\results.json"))
+assert acceptance["passed"] and not acceptance["quantized_floating_quality_accepted"]
+final_rows = []
+for name in ("cardigan-floating-cpu", "cardigan-floating-blas", "bottoms-q8", "cardigan-q8", "bottoms-mixed", "cardigan-mixed"):
+    row = final["runs"][name]
+    final_rows.append([name, f'{row["sampling_seconds"]:.3f}', f'{row["process_wall_seconds"]:.3f}',
+                       f'{row["peak_working_set_bytes"]/2**30:.4f}', f'{row["sampled_peak_private_bytes"]/2**30:.4f}'])
+final_figures = "".join(image(ROOT / "reports" / "comparison-gallery-optimized" / (case + "-" + pair) / "side-by-side.jpg",
+                             f"Final integrated comparison: {case}, {pair}. Same generation settings and explicit crop; numerical metrics use original full-resolution pixels, not this JPEG contact sheet.")
+    for case in ("cardigan", "bottoms")
+    for pair in ("blas-floating", "blas-upstream", "q8-floating", "mixed-floating", "mixed-q8"))
+
+chapter(38, "Integrate the winners and preserve the full evidence",
+    "Independent microbenchmarks cannot prove that optimizations combine safely. The final pass had to target low-memory floating, low-memory diagnostic quantization and highest-throughput floating separately.",
+    "Ran four fresh cardigan CPU/BLAS/BLAS/CPU three-forward controls, then six full 20-step recordings: floating CPU/BLAS cardigan and Q8/mixed on both photographic pairs. Matching runtime-ready weights, mmap off, bounded modulation precompute/release and strict fused GELU were combined. Commands, source/executable/model/condition hashes, actual matrix types/backends, phase profiles and external process timelines are retained.\n\nCompared all quantized outputs to their original same-policy recordings, not to a newly relaxed float target. The new native floating cardigan trajectory reproduces its historical native crop; it does not create a missing Python intermediate oracle. Final consolidation built a ten-row gallery and verified its exact source rendering/crops/metrics.",
+    "All six full executions passed their declared 3 GiB floating / 2 GiB quantized working-set ceilings. Tensor payloads across all 84 quantized legacy state-file comparisons were bit-identical, with exact cropped pixels. Floating BLAS cardigan passed every native trajectory gate (max relative L2 8.83848e-7); only 23 crop channels differed by one. Warm cardigan medians were 60.9395s CPU / 40.7543s BLAS, 33.12% less time. Full cardigan BLAS sampling was 32.60% faster than floating CPU.\n\nQ8 peaks are now 1.4002-1.4016 GiB versus historical 4.151-4.164 GiB (about 66% lower); mixed 1.5261-1.5266 GiB versus 4.277-4.304 GiB (about 64-65% lower). Same-policy quality errors remain unchanged. The historical unchanged-Python observations (1258.04s cardigan, 1325.48s bottoms process wall) remain faster: native BLAS narrows the gap, not reverses it.",
+    "Private commit matters: ordinary CPU peaked at 2.1402 GiB versus BLAS 4.2843 GiB despite similar resident peaks. Isolated DLL-only probes showed about 1.88 GiB private-commit increase at sixteen OpenBLAS threads before any GGML/model/GEMM. The majority of that overhead is library startup, not quantization. Working set and private commit overlap and must not be added. Public quantized/BLAS/GPU restrictions remain.",
+    example("Accepted floating opt-ins",
+            '{"fashn_modulation_cache":true,"fashn_modulation_cache_mib":128,"fashn_fused_gelu":true}',
+            "Existing model_args JSON. Use matching floating weights with mmap/eager loading disabled; this does not enable public quantized or BLAS inference."),
+    extra=table(["Case / policy","Sampling s","Process wall s","Peak WS GiB","Sampled peak private GiB"], final_rows) + final_figures,
+    evidence=("reports\\memory-and-latency-optimization-results.md", "checkpoint38-integrated\\results.json",
+              "checkpoint38-integrated\\final-summary.json", "checkpoint38-integrated\\openblas-dll-memory.json"),
+    status="Integrated pass complete; support gates retained")
+
+
+def inline_markdown(value, base):
+    tokens = []
+
+    def stash(fragment):
+        tokens.append(fragment)
+        return f"\x00{len(tokens)-1}\x00"
+
+    value = re.sub(r"`([^`]+)`", lambda m: stash("<code>" + esc(m.group(1)) + "</code>"), value)
+
+    def md_link(match):
+        label, target = match.groups()
+        if target.startswith(("https://", "http://")):
+            href = target
+        elif target.startswith("#"):
+            return label + " (" + target + ")"
+        else:
+            path = Path(target)
+            if not path.is_absolute():
+                path = base / target.replace("/", "\\")
+            if not path.exists():
+                return label + " [" + target + "; historical link]"
+            href = path.resolve().as_uri()
+        return stash(f'<a href="{esc(href)}">{esc(label)}</a>')
+
+    value = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", md_link, value)
+    value = esc(value)
+    value = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", value)
+    for i in reversed(range(len(tokens))):
+        value = value.replace(f"\x00{i}\x00", tokens[i])
+    return value
+
+
+def render_markdown(value, base):
+    """Render the report subset; preserve the exact original alongside it."""
+    lines = value.splitlines()
+    output = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped:
+            i += 1
+            continue
+        if stripped.startswith("```"):
+            block = []
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                block.append(lines[i])
+                i += 1
+            output.append("<pre><code>" + esc("\n".join(block)) + "</code></pre>")
+            i += 1
+            continue
+        heading = re.match(r"^(#{1,6})\s+(.+)", stripped)
+        if heading:
+            level = min(6, len(heading[1]) + 2)
+            output.append(f"<h{level}>" + inline_markdown(heading[2], base) + f"</h{level}>")
+            i += 1
+            continue
+        if i + 1 < len(lines) and "|" in line and re.fullmatch(r"[\s|:\-]+", lines[i + 1]) and "-" in lines[i + 1]:
+            headers = [v.strip() for v in line.strip().strip("|").split("|")]
+            rows = []
+            i += 2
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                rows.append([v.strip() for v in lines[i].strip().strip("|").split("|")])
+                i += 1
+            output.append('<div class="table-scroll"><table><thead><tr>' + "".join(
+                "<th>" + inline_markdown(v, base) + "</th>" for v in headers) + "</tr></thead><tbody>" +
+                "".join("<tr>" + "".join("<td>" + inline_markdown(v, base) + "</td>" for v in row) + "</tr>" for row in rows) +
+                "</tbody></table></div>")
+            continue
+        if re.match(r"^([-*]|\d+[.])\s+", stripped):
+            items = []
+            while i < len(lines) and re.match(r"^\s*([-*]|\d+[.])\s+", lines[i]):
+                item = re.sub(r"^\s*([-*]|\d+[.])\s+", "", lines[i])
+                i += 1
+                while i < len(lines) and lines[i].startswith(("  ", "\t")) and not re.match(r"^\s*([-*]|\d+[.])\s+", lines[i]):
+                    item += " " + lines[i].strip()
+                    i += 1
+                items.append("<li>" + inline_markdown(item, base) + "</li>")
+            output.append("<ul>" + "".join(items) + "</ul>")
+            continue
+        paragraph = [stripped]
+        i += 1
+        while i < len(lines) and lines[i].strip() and not re.match(r"^\s*(#{1,6}\s|```|[-*]\s|\d+[.]\s|\|)", lines[i]):
+            paragraph.append(lines[i].strip())
+            i += 1
+        output.append("<p>" + inline_markdown(" ".join(paragraph), base) + "</p>")
+    return "".join(output)
+
+
+archive_specs = [
+    ("original-plan", SESSION / "fashn-vton-1.5-integration-plan.md", "Original architecture plan, before implementation",
+     "Historical proposal dated 2026-09-08. Proposed APIs, estimates and future-tense options are not claims that every proposal shipped."),
+    ("history-30", ROOT / r"reports\implementation-and-experiment-history.md", "Detailed history through checkpoint 30",
+     "Historical report preserved in full. Later optimization results supersede its remaining-work and memory statements."),
+    ("quantization", ROOT / r"reports\quantization-and-upstream-comparison.md", "Full upstream / quantization experiment report",
+     "Includes completed and partial snapshots, twelve combination/control probes, boundary metrics and the Python PID correction."),
+    ("optimization-plan", ROOT / r"reports\memory-and-latency-optimization-plan.md", "Original memory/latency investigation and plan",
+     "The plan's opening execution update is retained. Distinguish proposed fallback work from the selected implementation."),
+]
+for number, name in [
+    (31, "memory-attribution"), (32, "runtime-ready-weights"), (33, "modulation-progress"),
+    (34, "gelu-progress"), (35, "blas-progress"), (36, "cfg-and-reuse"),
+    (37, "preparation-progress"), (38, "integrated-progress")]:
+    archive_specs.append((f"report-{number}", ROOT / "reports" / f"checkpoint{number}-{name}.md",
+                          f"Complete checkpoint {number} report",
+                          "Historical evidence, individual controls and corrections. Checkpoint 35 uses same-BLAS-binary CPU controls; checkpoint 38 distinguishes the ordinary CPU binary."))
+archive_specs += [
+    ("final-results", ROOT / r"reports\memory-and-latency-optimization-results.md", "Consolidated final optimization results",
+     "Final selected configurations, full-image figures, warm/current/peak memory, DLL-only probes and remaining limits."),
+    ("runtime-guide", REPO / r"docs\fashn_vton.md", "Complete current runtime / developer guide",
+     "Current working-tree documentation snapshot. Commands/examples here describe current behavior, not an immutable historical release."),
+    ("ranking-report", ROOT / r"reports\matrix-sensitivity-complete\ranking.md", "Complete matrix ranking commentary",
+     "The complete 104-row CSV is also rendered below; costs and effects belong to the fixed calibration conditions."),
+]
+archive_parts = []
+for identifier, path, title, note in archive_specs:
+    raw = text(path)
+    archive_parts.append(f'<section id="archive-{identifier}" class="archive"><details class="report-detail"><summary>{esc(title)}</summary>'
+                         f'<div class="archive-content"><p class="callout">{esc(note)}</p><p>{link(path, str(path))}</p>'
+                         f'<p class="small">SHA256: <code>{records[str(path)]["sha256"]}</code></p>'
+                         f'{render_markdown(raw, path.parent)}<details><summary>Exact original text (formatting-independent record)</summary>'
+                         f'<pre class="verbatim">{esc(raw)}</pre></details></div></details></section>')
+
+ranking_path = ROOT / r"reports\matrix-sensitivity-complete\ranking.csv"
+ranking = list(csv.reader(text(ranking_path).splitlines()))
+assert len(ranking) == 105, "The complete 104-matrix ranking must be present"
+ranking_html = ('<section id="all-matrices" class="chapter"><h2>All 104 individual restoration experiments</h2>'
+                '<p>The table below preserves every row and column of the completed ranking, not only the winning matrices. '
+                'It measures interventions on one fixed photographic state; joint and independent-image results follow different experiments.</p>'
+                + table(ranking[0], ranking[1:]) + '<p>' + link(ranking_path, "Original CSV") + '</p></section>')
+
+json_archives = [
+    ("matrix-study", ROOT / r"reports\matrix-sensitivity-complete\study-snapshot.json", "All 104 intervention records / commands / hashes"),
+    ("policy-evaluation", ROOT / r"checkpoint29-policy-evaluation\evaluation.json", "All twelve combined-policy and local-state controls"),
+    ("load-controls", ROOT / r"reports\checkpoint31-load-summary\summary.json", "Complete sixteen-case load-only control summary"),
+    ("full-image-summary", ROOT / r"reports\full-image-precision-summary.json", "Pre-optimization full-image evidence snapshot"),
+    ("integrated-summary", ROOT / r"checkpoint38-integrated\final-summary.json", "Final phase memory, types/backends and per-step quantized errors"),
+    ("dll-probe", ROOT / r"checkpoint38-integrated\openblas-dll-memory.json", "Isolated OpenBLAS DLL startup memory probes"),
+]
+for identifier, path, title in json_archives:
+    raw = text(path)
+    json.loads(raw)
+    archive_parts.append(f'<section id="archive-{identifier}" class="archive"><details class="report-detail"><summary>{esc(title)}</summary>'
+                         f'<div class="archive-content"><p>{link(path, str(path))}</p><p class="small">'
+                         f'SHA256: <code>{records[str(path)]["sha256"]}</code></p><pre class="verbatim">{esc(raw)}</pre></div></details></section>')
+
+setup = '<section id="beginning" class="chapter"><div class="eyebrow">Before checkpoint 1</div><h2>From machine assessment to the first working image</h2>' + paras(
+    "The project began with a practical question: can this Windows machine run stable-diffusion.cpp locally? Inspection found a Windows 11 Enterprise Hyper-V VM exposing an AMD EPYC 7763, eight physical cores / sixteen logical processors, 64 GB RAM, AVX2/FMA and roughly 205 GB free disk. Only display adapters were exposed: no usable compute GPU. The CPU model's physical-machine core count was not used as the VM's thread budget.\n\n"
+    "Installed a pinned stable-diffusion.cpp source checkout under C:\\source and built Release CPU binaries with the installed Visual Studio 2022 toolchain. CMake was present inside Visual Studio but not on PATH; the initial fallback discussion about using a prebuilt binary was superseded by the successful native build.\n\n"
+    "Downloaded an SD 1.5 Q4_0 GGUF and generated a 256x256 four-step image. The conversation recorded about 20.4 seconds overall. The retained log separately reports 13.20 seconds sampling, 5.35 seconds VAE decode and 19.00 seconds inside generate_image: these are different timing scopes, not conflicting measurements. The actual GGUF is 3,051,366,272 bytes (about 2.84 GiB), correcting the preliminary approximately 1.1 GB download estimate.\n\n"
+    "This confirmed model loading, text encoding, diffusion, VAE decode and PNG output on CPU. It did not predict FASHN latency: FASHN runs a much larger pixel-space transformer with a different architecture and canvas. The saved SD image later became a regression control for FASHN-specific changes.") + example(
+        "Initial CPU smoke command, reconstructed from the recorded workload",
+        r"""& 'C:\source\stable-diffusion.cpp\build\bin\Release\sd-cli.exe' `
+  -m 'C:\source\stable-diffusion.cpp\models\v1-5-pruned_Q4_0.gguf' `
+  -p '<the original smoke prompt, or your own prompt>' `
+  -W 256 -H 256 --steps 4 `
+  -o 'C:\source\stable-diffusion.cpp\outputs\new-smoke-test.png'""",
+        "Illustrative replay template, not the original exact argv. A placeholder prompt is intentional; do not overwrite the original regression image.") + image(
+            REPO / r"outputs\smoke-test.png",
+            "Initial SD 1.5 CPU smoke test: 256x256, four steps. Coarse output is expected at four steps; this is not FASHN.") + '<p>' + link(
+                REPO / r"outputs\smoke-test.log", "Original smoke log") + '</p></section>'
+
+design = '<section id="architecture" class="chapter"><div class="eyebrow">Investigation and plan, before implementation</div><h2>Why this needed a dedicated model family</h2>' + paras(
+    "The user next requested an extremely detailed plan, explicitly no implementation yet. We inspected stable-diffusion.cpp d04e895 and FASHN 7c0f10a, plus the released checkpoint's 39,560-byte safetensors JSON header using HTTP range reads. The approximately 1.94 GB weight payload was not downloaded during that design phase. The resulting approximately 10,600-word plan covered architecture, shape/name mapping, C API/CLI/server contracts, preprocessing, conversion and parity gates.\n\n"
+    "The central decision was a new FASHN family and try-on entry point, not a FLUX alias, ordinary img2img, LoRA or ControlNet. Existing FLUX blocks, Q/K normalization, modulation, timestep embedding and final projection could be reused, but the surrounding inputs, patch mixers, category logic, output layout and sampling conventions required dedicated wiring. The inherited 'txt' variable denotes garment tokens here, not text.") + table(
+        ["Architecture surface", "Released preset and consequences"],
+        [
+            ["Representation", "Direct RGB pixels: no VAE, CLIP, T5 or text prompt in FASHN inference"],
+            ["Canvas / patches", "576x864; 12x12 patches; 48x72 = 3456 tokens per stream; 6912 joint"],
+            ["Target input", "Noisy RGB + person RGB + grayscale pose = 7 channels"],
+            ["Garment input", "Garment RGB + grayscale pose = 4 channels"],
+            ["Width / heads", "Hidden1280, MLP5120, ten heads x128"],
+            ["Block sequence", "4 target-only patch mixers -> 8 double-stream -> 16 joint single-stream -> final RGB projection"],
+            ["Positions", "RoPE axes16/56/56; theta10000; [0,row,column]; duplicated across streams"],
+            ["Categories", "Null0 / tops1 / bottoms2 / one-pieces3"],
+            ["Sampling", "Ascending shifted time0->1; Euler; sequential CFG; 20-step/skip1 means39 forwards"],
+            ["Layout", "PyTorch target [1,7,864,576]; native logical [576,864,7,1], contiguous dimension first"],
+        ]) + '<div class="pipeline" aria-label="Deployed pipeline"><div>Person + garment</div><span>&rarr;</span><div>Optional native<br>pose / parser / resize</div><span>&rarr;</span><div>4 prepared tensors<br>+ crop / category</div><span>&rarr;</span><div>FASHN graph<br>+ exact sampler</div><span>&rarr;</span><div>RGB / crop / PNG<br>C API, CLI, HTTP, UI</div></div>' + paras(
+    "The parity-first sequence was deliberate: pin reference -> recognize checkpoint -> compare graph -> match sampler -> expose prepared inference -> establish raw preparation -> optimize only after correctness. The plan warned that the existing flow path used the opposite time/velocity convention, that prefixed tensors could be mistaken for FLUX, and that the human parser had a separate noncommercial research/evaluation restriction.\n\n"
+    "The later native parser-free flat-lay route avoids unnecessary parsing while reproducing output conditions. The upstream constructor/control flow may still invoke parsing in nominally segmentation-free use; 'segmentation-free' must not be interpreted as a blanket guarantee that every photo mode needs no parser. A flat-lay's blank pose also differs from a classifier-free normalized-zero null condition.") + example(
+        "Architectural sketch",
+        """target = concat(noisy_rgb, person_rgb, person_pose)  # 7 channels
+garment = concat(garment_rgb, garment_pose)           # 4 channels
+img = patch_embed_target(target)
+gar = patch_embed_garment(garment)
+vec = time_embed(t) + category_embed(category)
+for block in patch_mixers:      # target only
+    img = block(img, vec, positions)
+for block in double_blocks:
+    img, gar = block(img, gar, vec, joint_positions)
+joint = concat_tokens(gar, img)
+for block in single_blocks:
+    joint = block(joint, vec, joint_positions)
+velocity = unpatchify(final_project(target_tokens(joint), vec))""") + '<p><a href="#archive-original-plan">Read the entire original plan, including its proposed code and file-level integration map.</a></p></section>'
+
+glossary = '<section id="reading" class="chapter"><h2>How to read the evidence without mixing scopes</h2>' + table(
+    ["Term", "Meaning in this project"],
+    [
+        ["Execution passed", "The command completed and artifacts are complete. It does not mean floating parity or visual quality passed."],
+        ["Same-policy exact", "Changing loading/cache/lifetime preserves a policy's tensor bytes or pixels. Q8 can be exactly preserved and still differ from floating."],
+        ["Numerical oracle", "Pinned original F32 model with explicit MATH attention and sequential branch sampling for diagnosis."],
+        ["Actual original Python", "Unchanged TryOnPipeline._sample with default SDPA and batched CFG; prepared inputs and constructor bypass are disclosed."],
+        ["Quality", "Observed garment/pose/background behavior on a small unpaired set, not paired ground truth, identity validation or product certification."],
+        ["Process wall / sampling", "Different start/end boundaries. Prepared-only inference excludes raw preparation and HTTP queue/transport."],
+        ["Fresh / warm", "Fresh process versus subsequent forwards; neither means the shared machine's filesystem cache was flushed."],
+        ["Working set / private commit", "Resident pages versus committed private memory. Metrics overlap, are not additive, and have different sampling guarantees."],
+        ["Graph arena", "One allocator's workspace capacity, not all process memory, parameters or BLAS/ORT-private allocations."],
+        ["Current source excerpt", "Exact lines captured from the final uncommitted working tree. Not an invented historical source revision."],
+    ]) + paras(
+    "The chronology is reconstructed from completed checkpoint reports and available conversation records. No Git commit was created for each checkpoint, so the book does not invent commit dates or claim that today's source is byte-for-byte the original implementation at each earlier stage. Later hardening may appear in current excerpts; each excerpt carries its path, line range and a hash in the companion provenance file.\n\n"
+    "The earlier history numbered its own report sections differently from implementation checkpoints. This book uses the actual checkpoint numbers 1-38. The quality suite at checkpoint22 was staged/resumed around checkpoints23-24; ordering a workstream in this navigation does not falsely assert that every one of its final runs finished before all later-numbered work.\n\n"
+    "All figures are embedded and available offline. Detailed historical reports and selected complete numeric records are embedded below as well. Links to additional raw logs, source files and tensor directories require the original C:\\source tree. Large model weights, binaries and trajectory tensor payloads are intentionally not embedded in an HTML document.") + '</section>'
+
+failure_rows = [
+    ["03", "FASHN mistaken for a FLUX-like family / name collisions", "Dedicated recognition and validation before model dispatch"],
+    ["01,05", "Algebraically similar schedule rounded differently", "Reproduce original linspace/reciprocal F32 ordering"],
+    ["04", "F32 GELU secretly used FP16 lookup", "FASHN-only explicit F32 tanh-GELU; no gate relaxation"],
+    ["11", "Flash K/V casts caused late-layer failures", "Preserve F32 K/V and enforce 28 real flash nodes"],
+    ["09", "Parser license differs from core runtime", "Explicit research/evaluation consent, isolated environment and local hashes"],
+    ["15", "Parser-logit resize flipped a boundary label", "Torch-compatible half-pixel F32 bilinear interpolation"],
+    ["16", "Direct F16/BF16/Q8 arithmetic failed", "Accept reduced storage with F32 upcasts; keep direct arithmetic guarded"],
+    ["22", "Partial/resumed quality work could look complete", "Expected-case list, fingerprint validation and separate visual/execution states"],
+    ["14,24", "uint64 seed rounding / stale UI races", "BigInt serialization and polling/cancellation identity handling"],
+    ["24", "stop() before listener running was ineffective", "Monitor actual listener state; propagate failed bind"],
+    ["27", "Launcher memory incorrectly reported as Python model memory", "Invalidate first memory figure; interpreter PID ownership handshake"],
+    ["27", "Acknowledgement ordering / timeout ownership issues", "Correct ordering; owned-process handles/snapshots; allocation and child cleanup regressions"],
+    ["28,29", "High layer error confused with matrix sensitivity", "Measure all104 restorations, combinations and real-state behavior"],
+    ["26,31", "Q8 used more RSS despite fewer weight bytes", "Measure resident source duplication and conversion scratch"],
+    ["32", "Generic loader rewrite was a fallback, not necessary", "Use exact runtime-policy files instead"],
+    ["33", "Caching could retain weights and only add memory", "Layerwise precompute, actual release and bounded windows"],
+    ["33", "Tiny cache can save memory but cost time", "Report 1MiB-window slowdown; default bounded128MiB"],
+    ["34", "Initial fused scalar GELU slower; no arena win", "Scoped precise implementation; small opt-in gain, no RAM claim"],
+    ["34", "Native manifest passed to Python-only comparator", "Repair analysis and preserve successful generation; no rerun"],
+    ["35", "BLAS primary-only support check lost flash nodes", "Explicit CPU fallback at graph construction and dispatch"],
+    ["36", "B=2 / extra image caches lacked consistent benefit", "Do not implement/promote a larger unproven runtime"],
+    ["38", "Similar RSS hid higher BLAS private commit", "Separate no-BLAS control and DLL-only thread-scaling probes"],
+    ["38", "Historical wall-time lookup used wrong JSON nesting", "Read run.wall_seconds; correct analysis, not inference"],
+]
+ledger = '<section id="decisions" class="chapter"><h2>Failure and decision ledger</h2><p>Failed attempts and rejected ideas are part of the project, not removed from the story. A correction to analysis is not a reason to regenerate an already completed image.</p>' + table(
+    ["Checkpoint","Problem / rejected assumption","Resolution / decision"], failure_rows) + '</section>'
+
+dll = json.loads(text(ROOT / r"checkpoint38-integrated\openblas-dll-memory.json"))
+memory_explainer = '<section id="memory-model" class="chapter"><h2>The final memory model, in bytes</h2>' + paras(
+    "The eligible 104 matrices contain 707,788,800 elements. Q8_0 stores 34 bytes per 32 weights, or 1.0625 bytes/weight, not exactly one. Compared with BF16 core storage, that saves 663,552,000 bytes (about 0.618 GiB). Protected F32 parameters and F32 activations prevent a blanket 2x/4x total-process guarantee.\n\n"
+    "The approximately two-thirds reduction versus old quantized runs combines removing original-source duplication, avoiding runtime conversion and retiring modulation parameters. It is not the compression ratio of quantization alone. Against the already optimized floating CPU cardigan, optimized Q8 reduces peak working set by about 30.4%.") + table(
+        ["Bytes","Floating BF16/F32","Q8/F32","Mixed100Q8/4F32"],
+        [
+            ["Ready file","2,471,712,672","1,808,160,672","1,942,919,072"],
+            ["Registered payload","2,471,677,632","1,808,125,632","1,942,884,032"],
+            ["Active denoising parameters","1,427,504,832","763,952,832","898,711,232"],
+            ["Denoising arena","600,355,904","564,180,032","564,180,032"],
+            ["39-pair modulation cache","32,148,480","32,148,480","32,148,480"],
+            ["Original source mappings","0","0","0"],
+            ["Runtime conversions / scratch","0 / 0","0 / 0","0 / 0"],
+        ]) + '<h3>Library startup can dominate private commit</h3>' + table(
+        ["Requested / actual OpenBLAS threads","DLL-only private-commit delta bytes"],
+        [[f'{r["requested_threads"]} / {r["actual_threads"]}', f'{r["private_delta_bytes"]:,}'] for r in dll]) + paras(
+    "These probes use a fresh standard-library-only interpreter and load only the official DLL: no NumPy, model, GGML or GEMM. The sixteen-thread increase is about 1.88 GiB, scaling approximately 128 MiB per extra worker, while resident growth is below 0.6 MiB. This establishes the dominant startup contribution without pretending every backend-private byte is attributed. Setting one initial thread and later increasing to sixteen is not a demonstrated free saving.") + '</section>'
+
+status = '<section id="current-status" class="chapter"><h2>What exists now, what was reused, and what remains</h2>' + table(
+    ["Surface","Implemented","Reused / limit"],
+    [
+        ["Transformer", "Dedicated FASHN graph, config, conditioning, captures", "GGML and compatible FLUX blocks; released fixed preset"],
+        ["Sampling", "Exact schedule, Euler/CFG/noise/pixels, multi-sample sequencing", "Existing RNG/tensors; B=1 graphs, 1-4 sequential outputs"],
+        ["Public API / CLI", "Size-versioned try-on API and strict prepared manifest mode", "Existing context/loader; public floating CPU path"],
+        ["Raw preparation", "Native transforms, poses, parser/masks and shared Preparer", "OpenCV/ORT plus original learned weights; parser license restricted"],
+        ["Service / browser", "Async jobs, progress/cancel, lifecycle, byte budget, /try-on UI", "Existing HTTP/queue framework; local, unauthenticated, nondurable"],
+        ["Weights / memory", "Selective conversion, ready files, modulation release/cache", "Existing quantizers; no generic loader rewrite"],
+        ["Throughput", "Strict F32 flash/GELU, diagnostic BLAS/CPU fallback", "No GGML source modifications; public BLAS not promoted"],
+        ["Evidence", "Reference, full trajectories, quality, browser, soak, ablation, profiles", "Original PyTorch remains the independent implementation"],
+    ]) + paras(
+    "This is a genuine native inference workflow, not Python hidden behind a C++ wrapper. It is also not a rewrite of every dependency. Python remains a development/oracle/conversion/analysis tool; deployed prepared inference and optional raw preparation do not invoke it.\n\n"
+    "The two standing model-support blocks are GPU validation (no exposed compute GPU) and public quantized arithmetic (failed numerical/quality gates). BLAS remains diagnostic-only. Full-model B=2, deeper/image-specific caches, new normalization/residual fusion and a new idle-workspace policy were deliberately not shipped without evidence.\n\n"
+    "Broader poses/populations/garments/seeds, 30/50-step sweeps, paired/statistical quality assessment, a complete original-Python cardigan intermediate oracle, production authentication, durable jobs, distributed serving and cross-platform certification are not completed by this small local study. Fine-grained timing of every raw substage through HTTP transport and a full raw 20-step latency matrix also remain outside the published measurements.\n\n"
+    "Parser consent remains local noncommercial research/evaluation only. CatVTON demo imagery is attributed to Zheng-Chong/CatVTON revision 999bdbe81e6008a3f5749af7c1e0b0fa3d21b48e under the repository-stated CC BY-NC-SA4.0 terms. Original FASHN example imagery is separately identified. Do not assume permission for unrestricted redistribution because the inference implementation is native.\n\n"
+    "All implementation changes remain uncommitted. No push, pull request, external image upload or alteration of GGML, thirdparty or the general frontend submodule was made in this work.") + '</section>'
+
+reproduction = '<section id="reproduction" class="chapter"><h2>How to reproduce or continue the investigation</h2>' + paras(
+    "Start with docs\\fashn_vton.md and the prepared-input CPU path. Keep the ordinary no-BLAS build and isolated build\\cpu-blas separate. Use local pinned weights and explicit parser consent where required. Do not copy a historical 'passed' label onto a changed executable, model, input, policy or schedule.\n\n"
+    "To reproduce exact experiments, use the argv arrays and hashes in each measurement/result JSON. They distinguish model sampling from process wall, original-file from ready-file loading, CPU from BLAS and synthetic from photographic conditions. Historical Python memory must use the interpreter-owning worker, not a launcher PID.\n\n"
+    "The four-matrix policy is frozen, not recalibrated for cardigan. Any new quantized arithmetic or restoration choice requires fresh local-state and free-running image evidence; loading/lifetime-only changes should preserve existing same-policy bytes. Keep models serial on this shared CPU machine and do not flush system caches.") + source(
+        r"scripts\benchmark_fashn_vton.py", 122, 131,
+        "The current benchmark emits the actual supported CLI flags. The full guide below supplies complete preparation, API, server and diagnostic examples.") + table(
+        ["Concern","Entry points / evidence"],
+        [
+            ["Numerical reference", "export_fashn_vton_reference.py; test_fashn_vton_reference.py; compare_fashn_trajectories.py"],
+            ["Graph / sampler / ABI", "test-fashn-vton-graph; test-fashn-vton-trajectory; native sampler/C API contracts"],
+            ["Preparation", "prepare_fashn_vton.py; sd-fashn-prepare; test_fashn_native_preprocess.py"],
+            ["Service / browser", "test_fashn_vton_server.py; test_fashn_vton_browser.py; test_fashn_vton_ui.cjs"],
+            ["Precision", "test-fashn-vton-conversion; run_fashn_matrix_ablation.py; evaluate_fashn_precision_policies.py"],
+            ["Memory / throughput", "fashn_memory_profile.h; summarize_fashn_memory.py; test-fashn-math; benchmark_fashn_vton.py"],
+            ["Final integrated runs", "checkpoint38-integrated\\results.json, final-summary.json, per-run manifests/profiles"],
+            ["Human-readable results", "reports\\memory-and-latency-optimization-results.md; comparison-gallery-optimized\\index.html"],
+        ]) + '<p><a href="#archive-runtime-guide">The entire current runtime/developer guide is embedded below.</a></p></section>'
+
+assert sorted(c["number"] for c in chapters) == list(range(1, 39))
+inventory = '<section id="source-map" class="chapter"><h2>Code excerpt inventory and provenance</h2><p>Each excerpt below is captured from the current working tree, not reconstructed from an unavailable per-checkpoint commit. A machine-readable sidecar records full-file and excerpt SHA256 hashes.</p>' + table(
+    ["Source file","Captured line range"],
+    [[str(Path(s["path"]).relative_to(REPO)), f'{s["first_line"]}-{s["last_line"]}'] for s in snippets]) + '</section>'
+
+css = """
+:root{--ink:#17263c;--muted:#53667c;--nav:#13283e;--line:#dce5ef;--accent:#087f8c;--paper:#fff;--back:#eef3f8}
+*{box-sizing:border-box}[hidden]{display:none!important}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--back)}
+a{color:#006d91;text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}a:hover{color:#004765}
+.sidebar{position:fixed;inset:0 auto 0 0;width:270px;background:var(--nav);color:#dbe9f6;padding:22px 18px;overflow:auto}.brand{font-size:21px;font-weight:750;color:white}.sidebar p{font-size:12px;color:#a8bfd3}.sidebar label.small{color:#bbcad6}.sidebar a{display:block;color:#dbe9f6;text-decoration:none;padding:5px 7px;font-size:12px;line-height:1.45;border-radius:5px}.sidebar a:hover,.sidebar a:focus{background:#29475f}.sidebar .group{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#8cd2d1;margin:18px 7px 6px}.sidebar input{width:100%;padding:9px;border-radius:6px;border:1px solid #60788d;background:#203a51;color:white}.sidebar input::placeholder{color:#bbcad6}
+main{margin-left:270px;max-width:1280px;padding:28px 42px 80px}.hero{border-radius:18px;background:linear-gradient(120deg,#142c46,#0d6977);color:white;padding:42px;margin-bottom:24px}.hero h1{font-size:clamp(30px,4vw,46px);line-height:1.15;margin:8px 0 20px}.hero p{color:#d9e9f3;max-width:780px}.hero a{color:#b9f2ef}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:750;color:var(--accent)}.hero .eyebrow{color:#95e3de}.stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.stat{border:1px solid #ffffff30;border-radius:10px;padding:12px 17px;min-width:135px}.stat strong{display:block;font-size:26px}.stat span{font-size:12px;color:#d7e7ef}
+.chapter{background:white;border:1px solid var(--line);border-radius:13px;padding:30px 34px;margin:25px 0;overflow-wrap:anywhere}.chapter h2{font-size:28px;line-height:1.25;margin:9px 0 24px}.chapter h3{font-size:18px;margin-top:27px}.chapter p{margin:12px 0}.badge{display:inline-block;letter-spacing:0;text-transform:none;font-size:11px;background:#e7f4f2;color:#235b58;border:1px solid #c8e4df;padding:3px 8px;margin-left:10px;border-radius:12px}.lesson,.callout{background:#f0f7fb;border-left:4px solid #158c9a;padding:15px 20px;margin:24px 0}.lesson p{margin-bottom:0}.small,.evidence{font-size:12px;color:var(--muted)}
+.table-scroll{overflow-x:auto;margin:22px 0}table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.55}th{text-align:left;background:#eaf1f7;color:#18354e}th,td{padding:10px 12px;border:1px solid var(--line);vertical-align:top}tr:nth-child(even) td{background:#fafcfe}code{font:13px/1.6 Consolas,"Cascadia Code",monospace;background:#edf2f8;padding:1px 4px;border-radius:3px}pre{overflow:auto;background:#10253b;color:#e2eff8;border-radius:8px;padding:17px 19px;font:12px/1.65 Consolas,"Cascadia Code",monospace;tab-size:4}pre code{font:inherit;background:none;padding:0;color:inherit}.code-label{font-size:12px;font-weight:700;margin-top:21px;color:#3c536c}.code-line{display:block;min-height:1.65em;white-space:pre}.line-no{display:inline-block;color:#829bb3;width:42px;user-select:none}.source>p{font-size:14px;color:var(--muted)}.verbatim{white-space:pre-wrap;overflow-wrap:anywhere;max-height:680px}
+figure{margin:24px 0;background:#f6f9fc;border:1px solid var(--line);padding:12px;border-radius:9px}figure img{display:block;width:auto;max-width:100%;max-height:950px;margin:auto;object-fit:contain}figcaption{font-size:12px;color:var(--muted);margin-top:12px}.pipeline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:25px 0}.pipeline div{flex:1;min-width:125px;text-align:center;border:1px solid #bfdedc;background:#eaf7f5;border-radius:8px;padding:13px;font-size:12px;font-weight:650}.pipeline span{color:var(--accent)}
+.archive{margin:14px 0;border:1px solid var(--line);border-radius:9px;background:white}.archive summary{cursor:pointer;font-size:15px;font-weight:650;padding:18px}.archive-content{padding:0 25px 25px}.archive-content h3{font-size:24px}.archive-content h4{font-size:20px}.archive-content h5{font-size:17px}.archive-content h6{font-size:15px}.archive-content p,.archive-content li{font-size:14px}.archive-content details summary{font-size:12px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}button{background:#076e7b;color:white;border:0;padding:10px 15px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer}button:hover{background:#04535d}.footer{font-size:12px;color:var(--muted);margin-top:30px}.skip{position:absolute;left:-9999px}.skip:focus{left:280px;top:5px;background:white;padding:10px;z-index:5}
+@media(max-width:1050px){.sidebar{width:225px}main{margin-left:225px;padding:22px}.chapter{padding:23px}.hero{padding:28px}}
+@media(max-width:750px){.sidebar{position:relative;width:100%;max-height:320px}main{margin:0;padding:14px}.hero{padding:23px}.chapter{padding:20px}.chapter h2{font-size:24px}.stat{min-width:110px}.skip:focus{left:5px}.table-scroll{margin-left:-4px;margin-right:-4px}}
+@media print{body{background:white;font-size:11pt}.sidebar,.controls,.skip{display:none}main{margin:0;padding:0;max-width:none}.hero{background:#edf3f7;color:#17263c;border:1px solid #ccc}.hero p,.hero .eyebrow,.stat span{color:#17263c}.chapter{padding:16px;border:0;break-before:auto}h2,h3,summary{break-after:avoid}figure,tr,pre{break-inside:avoid}pre{white-space:pre-wrap;color:#111;background:#f3f3f3;font-size:8pt}.table-scroll{overflow:visible}a{color:#111}.verbatim{max-height:none}figure img{max-height:700px}}
+"""
+
+toc_top = [
+    ("reading", "Reading guide / measurement scopes"), ("beginning", "00 Machine setup and first SD image"),
+    ("architecture", "00 Architecture investigation and original plan"),
+]
+toc_bottom = [
+    ("decisions", "Failure / decision ledger"), ("memory-model", "Final memory model"),
+    ("current-status", "Current support and remaining work"), ("reproduction", "Reproduction entry points"),
+    ("source-map", "Code excerpt inventory"), ("all-matrices", "All 104 matrix experiments"), ("archives", "Complete embedded evidence"),
+]
+nav = '<nav class="sidebar" aria-label="Project history navigation"><div class="brand">FASHN native history</div><p>From CPU feasibility to full-image memory optimization.</p><label class="small" for="nav-search">Filter section titles</label><input id="nav-search" type="search" placeholder="e.g. parser, Q8, memory"><div class="group">Orientation</div>'
+nav += "".join(f'<a class="nav-link" href="#{key}">{esc(label)}</a>' for key, label in toc_top)
+nav += '<div class="group">38 implementation checkpoints</div>'
+nav += "".join(f'<a class="nav-link" href="#{c["id"]}">{c["number"]:02d} &nbsp; {esc(c["title"])}</a>' for c in chapters)
+nav += '<div class="group">Reference and complete evidence</div>'
+nav += "".join(f'<a class="nav-link" href="#{key}">{esc(label)}</a>' for key, label in toc_bottom) + "</nav>"
+
+built_at = datetime.now(timezone.utc).isoformat()
+hero = ('<header class="hero"><div class="eyebrow">Engineering history &middot; local research/evaluation</div>'
+        '<h1>FASHN VTON 1.5<br>from first CPU image to native inference</h1>'
+        '<p>A chronological, code-illustrated record of what was built, why it was needed, how it worked, '
+        'what failed, and what the measurements actually established. Includes every implementation checkpoint '
+        'and the full historical reports, not only the final successful numbers.</p>'
+        '<div class="stats"><div class="stat"><strong>38</strong><span>implementation checkpoints</span></div>'
+        '<div class="stat"><strong>104</strong><span>individual matrix interventions</span></div>'
+        '<div class="stat"><strong>1.40 GiB</strong><span>final diagnostic Q8 peak WS</span></div>'
+        '<div class="stat"><strong>~33%</strong><span>lower warm time with BLAS</span></div></div>'
+        '<p class="small">Snapshot compiled ' + esc(built_at) + '. Windows CPU-only. Public quantized/GPU and BLAS support remain restricted.</p></header>')
+
+pins = '<section class="chapter" id="pins"><h2>Source and environment identity</h2>' + table(
+    ["Component","Recorded identity"],
+    [
+        ["stable-diffusion.cpp base", "d04e8950c1ec8d30248cbe996682b3182fb1adf6"],
+        ["GGML", "e20c3a14aa70ee84ca58499814206dd08d8026bc"],
+        ["FASHN source", "7c0f10af3f91ad4048fe9729c470a13ef905d25a"],
+        ["FASHN model revision", "7720683168567eb5a2a4c67f15116c6e29c83ded"],
+        ["Original checkpoint SHA256", "d6cd38286885bc29fa487ea9383f80ffeb95862e7747c630d42c5d3c05bdd35a"],
+        ["Original checkpoint bytes", "1,943,668,048"],
+        ["Primary development environment", "Python3.12.10; torch2.8.0+cpu; NumPy2.2.6; Pillow11.3; safetensors0.6.2"],
+        ["Native optional preparation", "ONNX Runtime1.22.1; OpenCV4.12.0.88; separate parser-evaluation environment"],
+        ["CPU math", "AVX2/FMA; ordinary build BLAS/LLAMAFILE off; isolated OpenBLAS0.3.34 LP64 x64 build"],
+        ["Torch math build", "MKL2025.2 / oneDNN3.7.1, not DLLs linked opportunistically into native"],
+        ["Source / experimental root", r"C:\source\stable-diffusion.cpp / C:\source\fashn-vton-reference"],
+    ]) + '</section>'
+
+script = """
+const search = document.querySelector('#nav-search');
+search.addEventListener('input', () => {
+  const query = search.value.trim().toLowerCase();
+  document.querySelectorAll('.nav-link').forEach(a => { a.hidden = !a.textContent.toLowerCase().includes(query); });
+});
+document.querySelector('#expand-reports').addEventListener('click', () => {
+  document.querySelectorAll('.report-detail').forEach(d => { d.open = true; });
+});
+document.querySelector('#collapse-reports').addEventListener('click', () => {
+  document.querySelectorAll('.report-detail').forEach(d => { d.open = false; });
+});
+document.querySelector('#print-book').addEventListener('click', () => window.print());
+function revealAnchor() {
+  const target = document.getElementById(location.hash.slice(1));
+  if (target && target.classList.contains('archive')) target.querySelector('.report-detail').open = true;
+}
+window.addEventListener('hashchange', revealAnchor);
+revealAnchor();
+"""
+archive_intro = ('<section id="archives" class="chapter"><h2>Full embedded evidence archive</h2>'
+                 '<p>These are complete snapshots, not summaries. Historical future-tense statements, earlier partial rankings, '
+                 'rejected candidates and corrected measurements are preserved. The chronological chapters above explain what superseded them. '
+                 'An exact-text view accompanies each rendered Markdown report so formatting cannot discard evidence.</p>'
+                 '<p>The complete original plan and current runtime guide contain additional code, command lines, API examples, '
+                 'test lists and file-level reasoning. Expand selected reports or all reports, then use the browser Find command.</p>'
+                 '<div class="controls"><button id="expand-reports" type="button">Expand all reports</button>'
+                 '<button id="collapse-reports" type="button">Collapse reports</button>'
+                 '<button id="print-book" type="button">Print current view</button></div></section>')
+document = ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<meta name="description" content="Complete chronological engineering history of native FASHN VTON 1.5 in stable-diffusion.cpp.">'
+            '<title>FASHN VTON 1.5 - complete native project history</title><style>' + css + '</style></head><body>'
+            '<a class="skip" href="#main">Skip navigation</a>' + nav + '<main id="main">' + hero + glossary + setup + design + pins +
+            "".join(c["html"] for c in chapters) + ledger + memory_explainer + status + reproduction + inventory +
+            ranking_html + archive_intro + "".join(archive_parts) +
+            '<footer class="footer">Compiled from local reports, source excerpts and original output images. No inference was rerun '
+            'to create this history. Images, styling and scripts are embedded; optional source/evidence links require the original tree. '
+            'Large binary models/tensors are linked rather than embedded. The sibling provenance JSON records all captured hashes.</footer>'
+            '</main><script>' + script + '</script></body></html>')
+
+for path, identity in records.items():
+    assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == identity["sha256"], "Source changed: " + path
+OUT.write_text(document, encoding="utf-8")
+provenance = {
+    "schema": "fashn-project-history-v1", "compiled_at_utc": built_at, "html_path": str(OUT),
+    "html_sha256": hashlib.sha256(OUT.read_bytes()).hexdigest(),
+    "chapters": [{k: c[k] for k in ("number", "id", "title", "status")} for c in chapters],
+    "matrix_interventions": len(ranking)-1, "code_excerpts": snippets, "illustrations": illustrations,
+    "embedded_report_count": len(archive_specs) + len(json_archives),
+    "sources": records, "builder_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    "notes": ["Exact source excerpts are current uncommitted working-tree snapshots, not invented historical commits.",
+              "Historical Markdown is also embedded verbatim; no model/tensor payloads are embedded.",
+              "This is documentation-only work; no inference was repeated."],
+}
+OUT.with_suffix(".provenance.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+print(json.dumps({"html": str(OUT), "bytes": OUT.stat().st_size, "chapters": len(chapters),
+                  "code_excerpts": len(snippets), "illustrations": len(illustrations),
+                  "embedded_reports": provenance["embedded_report_count"], "matrix_rows": len(ranking)-1}))

@@ -1,0 +1,653 @@
+{
+  "control8": {
+    "changed_channels": 0,
+    "report": {
+      "passed": true,
+      "lazy": true,
+      "cpu_options": {
+        "intra_threads": 8,
+        "arena": true,
+        "spinning": true
+      },
+      "startup_seconds": 2.4146884,
+      "parser_loaded_at_startup": false,
+      "startup_process": {
+        "working_set_bytes": 412045312,
+        "peak_working_set_bytes": 612552704,
+        "private_commit_bytes": 594591744
+      },
+      "requests": [
+        {
+          "index": 0,
+          "photo": "flat-lay",
+          "segmentation_free": true,
+          "seconds": 0.8538996,
+          "parser_loaded": false,
+          "process": {
+            "working_set_bytes": 520314880,
+            "peak_working_set_bytes": 612552704,
+            "private_commit_bytes": 887050240
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 1,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 3.8345209,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1631350784,
+            "peak_working_set_bytes": 1634152448,
+            "private_commit_bytes": 2196975616
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 2,
+          "photo": "flat-lay",
+          "segmentation_free": false,
+          "seconds": 1.6596473,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1675223040,
+            "peak_working_set_bytes": 1685446656,
+            "private_commit_bytes": 2197254144
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 3,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 2.3163392,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1675341824,
+            "peak_working_set_bytes": 1685446656,
+            "private_commit_bytes": 2197254144
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        }
+      ]
+    }
+  },
+  "passive8": {
+    "changed_channels": 0,
+    "report": {
+      "passed": true,
+      "lazy": true,
+      "cpu_options": {
+        "intra_threads": 8,
+        "arena": true,
+        "spinning": false
+      },
+      "startup_seconds": 2.0476685,
+      "parser_loaded_at_startup": false,
+      "startup_process": {
+        "working_set_bytes": 412192768,
+        "peak_working_set_bytes": 612716544,
+        "private_commit_bytes": 583290880
+      },
+      "requests": [
+        {
+          "index": 0,
+          "photo": "flat-lay",
+          "segmentation_free": true,
+          "seconds": 0.8363151,
+          "parser_loaded": false,
+          "process": {
+            "working_set_bytes": 520171520,
+            "peak_working_set_bytes": 612716544,
+            "private_commit_bytes": 876187648
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 1,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 3.9601076,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1624469504,
+            "peak_working_set_bytes": 1627209728,
+            "private_commit_bytes": 2184015872
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 2,
+          "photo": "flat-lay",
+          "segmentation_free": false,
+          "seconds": 1.7449443,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1670004736,
+            "peak_working_set_bytes": 1678458880,
+            "private_commit_bytes": 2186006528
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 3,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 2.4604152,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1668091904,
+            "peak_working_set_bytes": 1678458880,
+            "private_commit_bytes": 2184024064
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        }
+      ]
+    }
+  },
+  "passive4": {
+    "changed_channels": 0,
+    "report": {
+      "passed": true,
+      "lazy": true,
+      "cpu_options": {
+        "intra_threads": 4,
+        "arena": true,
+        "spinning": false
+      },
+      "startup_seconds": 2.0328683,
+      "parser_loaded_at_startup": false,
+      "startup_process": {
+        "working_set_bytes": 411369472,
+        "peak_working_set_bytes": 611803136,
+        "private_commit_bytes": 585658368
+      },
+      "requests": [
+        {
+          "index": 0,
+          "photo": "flat-lay",
+          "segmentation_free": true,
+          "seconds": 0.9555337,
+          "parser_loaded": false,
+          "process": {
+            "working_set_bytes": 518864896,
+            "peak_working_set_bytes": 611803136,
+            "private_commit_bytes": 878456832
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 1,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 4.2614984,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1619550208,
+            "peak_working_set_bytes": 1622343680,
+            "private_commit_bytes": 2184151040
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 2,
+          "photo": "flat-lay",
+          "segmentation_free": false,
+          "seconds": 1.9697264,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1664086016,
+            "peak_working_set_bytes": 1673584640,
+            "private_commit_bytes": 2185089024
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 3,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 2.7652478,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1664090112,
+            "peak_working_set_bytes": 1673584640,
+            "private_commit_bytes": 2185089024
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        }
+      ]
+    }
+  },
+  "passive1": {
+    "changed_channels": 0,
+    "report": {
+      "passed": true,
+      "lazy": true,
+      "cpu_options": {
+        "intra_threads": 1,
+        "arena": true,
+        "spinning": false
+      },
+      "startup_seconds": 2.0048825,
+      "parser_loaded_at_startup": false,
+      "startup_process": {
+        "working_set_bytes": 411189248,
+        "peak_working_set_bytes": 610865152,
+        "private_commit_bytes": 585125888
+      },
+      "requests": [
+        {
+          "index": 0,
+          "photo": "flat-lay",
+          "segmentation_free": true,
+          "seconds": 2.3587079,
+          "parser_loaded": false,
+          "process": {
+            "working_set_bytes": 527892480,
+            "peak_working_set_bytes": 610865152,
+            "private_commit_bytes": 878231552
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 1,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 8.6853926,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1613172736,
+            "peak_working_set_bytes": 1615962112,
+            "private_commit_bytes": 2184151040
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 2,
+          "photo": "flat-lay",
+          "segmentation_free": false,
+          "seconds": 4.9069625,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1657950208,
+            "peak_working_set_bytes": 1667633152,
+            "private_commit_bytes": 2185453568
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 3,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 7.1670291,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1656475648,
+            "peak_working_set_bytes": 1667633152,
+            "private_commit_bytes": 2184007680
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        }
+      ]
+    }
+  },
+  "passive16": {
+    "changed_channels": 0,
+    "report": {
+      "passed": true,
+      "lazy": true,
+      "cpu_options": {
+        "intra_threads": 16,
+        "arena": true,
+        "spinning": false
+      },
+      "startup_seconds": 2.0868529,
+      "parser_loaded_at_startup": false,
+      "startup_process": {
+        "working_set_bytes": 414265344,
+        "peak_working_set_bytes": 614219776,
+        "private_commit_bytes": 588357632
+      },
+      "requests": [
+        {
+          "index": 0,
+          "photo": "flat-lay",
+          "segmentation_free": true,
+          "seconds": 0.7753216,
+          "parser_loaded": false,
+          "process": {
+            "working_set_bytes": 522862592,
+            "peak_working_set_bytes": 614219776,
+            "private_commit_bytes": 881156096
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 1,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 3.7697452,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1629962240,
+            "peak_working_set_bytes": 1632751616,
+            "private_commit_bytes": 2192306176
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 2,
+          "photo": "flat-lay",
+          "segmentation_free": false,
+          "seconds": 1.557633,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1675620352,
+            "peak_working_set_bytes": 1684140032,
+            "private_commit_bytes": 2194296832
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 3,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 2.2928171,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1673928704,
+            "peak_working_set_bytes": 1684140032,
+            "private_commit_bytes": 2192588800
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        }
+      ]
+    }
+  },
+  "no-arena8": {
+    "changed_channels": 0,
+    "report": {
+      "passed": true,
+      "lazy": true,
+      "cpu_options": {
+        "intra_threads": 8,
+        "arena": false,
+        "spinning": false
+      },
+      "startup_seconds": 2.0329279,
+      "parser_loaded_at_startup": false,
+      "startup_process": {
+        "working_set_bytes": 394645504,
+        "peak_working_set_bytes": 604164096,
+        "private_commit_bytes": 380887040
+      },
+      "requests": [
+        {
+          "index": 0,
+          "photo": "flat-lay",
+          "segmentation_free": true,
+          "seconds": 0.9029959,
+          "parser_loaded": false,
+          "process": {
+            "working_set_bytes": 409042944,
+            "peak_working_set_bytes": 604164096,
+            "private_commit_bytes": 393539584
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 1,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 4.1581067,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 689811456,
+            "peak_working_set_bytes": 1072414720,
+            "private_commit_bytes": 674074624
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 2,
+          "photo": "flat-lay",
+          "segmentation_free": false,
+          "seconds": 1.8166453,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 694337536,
+            "peak_working_set_bytes": 1073197056,
+            "private_commit_bytes": 678137856
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 3,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 2.5636478,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 694341632,
+            "peak_working_set_bytes": 1076662272,
+            "private_commit_bytes": 678141952
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        }
+      ]
+    }
+  },
+  "control8-repeat": {
+    "changed_channels": 0,
+    "report": {
+      "passed": true,
+      "lazy": true,
+      "cpu_options": {
+        "intra_threads": 8,
+        "arena": true,
+        "spinning": true
+      },
+      "startup_seconds": 2.0599549,
+      "parser_loaded_at_startup": false,
+      "startup_process": {
+        "working_set_bytes": 412250112,
+        "peak_working_set_bytes": 612794368,
+        "private_commit_bytes": 590376960
+      },
+      "requests": [
+        {
+          "index": 0,
+          "photo": "flat-lay",
+          "segmentation_free": true,
+          "seconds": 0.8211869,
+          "parser_loaded": false,
+          "process": {
+            "working_set_bytes": 522584064,
+            "peak_working_set_bytes": 612794368,
+            "private_commit_bytes": 883589120
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 1,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 3.8964461,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1628884992,
+            "peak_working_set_bytes": 1631674368,
+            "private_commit_bytes": 2194018304
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 2,
+          "photo": "flat-lay",
+          "segmentation_free": false,
+          "seconds": 1.6921271,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1672728576,
+            "peak_working_set_bytes": 1682886656,
+            "private_commit_bytes": 2194284544
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        },
+        {
+          "index": 3,
+          "photo": "model",
+          "segmentation_free": true,
+          "seconds": 2.4394722,
+          "parser_loaded": true,
+          "process": {
+            "working_set_bytes": 1673330688,
+            "peak_working_set_bytes": 1682886656,
+            "private_commit_bytes": 2194489344
+          },
+          "crop": [
+            0,
+            0,
+            576,
+            864
+          ]
+        }
+      ]
+    }
+  }
+}

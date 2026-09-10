@@ -207,6 +207,9 @@ public:
     ggml_tensor* forward(GGMLRunnerContext* ctx, ggml_tensor* x) override {
         ggml_tensor* w            = params["weight"];
         ggml_tensor* weight_scale = has_weight_scale ? params["weight_scale"] : nullptr;
+        if (ctx->full_precision_linear_weights && w->type != GGML_TYPE_F32 && !has_weight_scale) {
+            w = ggml_cast(ctx->ggml_ctx, w, GGML_TYPE_F32);
+        }
         if (w->type == GGML_TYPE_F8_E4M3 || w->type == GGML_TYPE_F8_E5M2) {
             bool supports_fp8_matmul = false;
             if (ctx->backend != nullptr) {

@@ -1,0 +1,215 @@
+import argparse
+import json
+import statistics
+import sys
+from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageDraw
+from safetensors.numpy import load_file
+
+ROOT = Path(r"C:\source\fashn-vton-reference")
+REPO = Path(r"C:\source\stable-diffusion.cpp")
+sys.path.insert(0, str(REPO / "scripts"))
+from benchmark_fashn_vton import measure_command
+from compare_fashn_trajectories import canonical, metrics, pixels
+from export_fashn_vton_reference import sha256
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--resume", action="store_true")
+args = parser.parse_args()
+assert json.loads((ROOT / r"checkpoint37-server-budget-soak\report.json").read_text())["passed"]
+output = ROOT / "checkpoint38-integrated"
+output.mkdir(exist_ok=args.resume)
+cpu = REPO / r"build\bin\Release\test-fashn-vton-trajectory.exe"
+blas = REPO / r"build\cpu-blas\bin\Release\test-fashn-vton-trajectory.exe"
+models = {"bf16": ROOT / r"checkpoint32-runtime-weights\bf16\model.gguf",
+          "q8": ROOT / r"checkpoint16-conversion\model-q8_0.gguf",
+          "mixed": ROOT / r"checkpoint32-runtime-weights\mixed\model.gguf"}
+policy = ROOT / r"reports\matrix-sensitivity-complete\candidate-top4.json"
+conditions = {"cardigan": ROOT / r"checkpoint22-quality-reference-preparation\flat-top-free\conditions.safetensors",
+              "bottoms": ROOT / r"checkpoint22-quality-reference-preparation\worn-bottoms-free\conditions.safetensors"}
+gallery = json.loads((ROOT / r"reports\comparison-gallery-v6\manifest.json").read_text())
+sources = [cpu, blas, policy, *models.values(), *conditions.values(),
+           Path(r"C:\source\fashn-native-deps\openblas-0.3.34\package\bin\libopenblas.dll")]
+sources.extend(REPO / name for name in (
+    r"src\model\diffusion\fashn_vton_model.h", r"src\model\diffusion\fashn_modulation.h",
+    r"src\model\diffusion\flux.hpp", r"src\core\strict_gelu.h", r"src\runtime\fashn_vton_sampling.h",
+    r"src\core\ggml_runner.cpp", r"src\core\ggml_runner.h", r"src\core\compute_workspace.cpp",
+    r"src\model_loader.cpp", r"src\model_manager.cpp", r"tests\test_fashn_vton_trajectory.cpp",
+    r"scripts\compare_fashn_trajectories.py", r"scripts\benchmark_fashn_vton.py"))
+for prepared_case in ("flat-top-free", "worn-bottoms-free"):
+    prepared = ROOT / "checkpoint22-quality-t16" / ("prepared-" + prepared_case) / "manifest.json"
+    if json.loads(prepared.read_text())["crop"] != {"x": 0, "y": 48, "width": 576, "height": 768}:
+        raise RuntimeError("Unexpected photographic crop")
+    sources.append(prepared)
+provenance = {str(p): sha256(p) for p in sources}
+path = output / "results.json"
+if path.exists():
+    report = json.loads(path.read_text())
+    if report["provenance"] != provenance:
+        raise RuntimeError("Resume executable/model/condition provenance changed")
+else:
+    report = {"passed": False, "provenance": provenance, "runs": {}, "warm_controls": {},
+              "scope": "Serial fresh processes, not cold filesystem cache. Quantized acceptance means unchanged same-policy output, not floating-quality acceptance."}
+report["passed"] = False
+
+
+def save():
+    path.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+
+
+def run(label, case, precision, backend="CPU", probe=False):
+    directory = output / label
+    command = [str(blas if backend == "BLAS" else cpu), str(models[precision]), str(conditions[case]),
+               str(directory), "20", "1.5", "1.5", "1", "42", "1" if case == "cardigan" else "2", "16",
+               "--backend", backend, "--matrix-type", "bf16" if precision == "bf16" else "q8_0",
+               "--mmap", "off", "--load-threads", "2", "--precompute-modulations",
+               "--modulation-cache-mib", "128", "--fused-gelu", "--memory-profile"]
+    if precision == "bf16":
+        command.append("--upcast-matrices")
+    if precision == "mixed":
+        command += ["--f32-matrices", str(policy)]
+    if probe:
+        command += ["--probe-forwards", "3", "--no-record"]
+    row = report["runs"].setdefault(label, {"command": command, "completed": False})
+    if row["command"] != command:
+        raise RuntimeError("Resume command changed")
+    save()
+    if "measurement" not in row:
+        if directory.exists():
+            raise RuntimeError(f"Partial run {label} needs inspection; refusing automatic regeneration")
+        row["measurement"] = measure_command(command, output / (label + ".log"), 7200,
+                                              output / (label + "-timeline.jsonl"))
+        save()
+    if row["measurement"]["exit_code"]:
+        raise RuntimeError(f"{label} process failed")
+    row["manifest"] = json.loads((directory / "manifest.json").read_text())
+    profile = [json.loads(line) for line in (directory / "memory-profile.jsonl").read_text().splitlines()]
+    if not profile or profile[-1]["phase"] != "model_released":
+        raise RuntimeError("Incomplete model lifetime profile")
+    if any(item.get("conversion", {}).get("converted_tensors", 0) for item in profile):
+        raise RuntimeError("Runtime-ready inference unexpectedly converted weights")
+    row["manifest_sha256"] = sha256(directory / "manifest.json")
+    row["memory_profile_sha256"] = sha256(directory / "memory-profile.jsonl")
+    row["working_set_ceiling_bytes"] = (3 if precision == "bf16" else 2) * 1024**3
+    if row["measurement"]["peak_working_set_bytes"] > row["working_set_ceiling_bytes"]:
+        raise RuntimeError(f"{label} exceeded declared process working-set ceiling")
+    row["completed"] = True
+    save()
+    print(label, "execution complete", row["manifest"]["sampling_seconds"],
+          row["measurement"]["peak_working_set_bytes"], flush=True)
+    return directory, row
+
+
+def compare_recordings(reference, actual, exact):
+    rm = json.loads((reference / "manifest.json").read_text())
+    nm = json.loads((actual / "manifest.json").read_text())
+    for key in ("steps", "cfg", "shift", "skip_cfg_last_n_steps", "seed", "category", "threads",
+                "schedule", "matrix_type", "upcast_matrices", "matrix_types"):
+        if key not in rm or rm[key] != nm[key]:
+            raise RuntimeError(f"Native recording setting mismatch: {key}")
+    result = {"passed": True, "exact_required": exact, "files": [],
+              "reference_manifest_sha256": sha256(reference / "manifest.json")}
+    for filename in ["initial.safetensors"] + [f"step-{i}.safetensors" for i in range(20)]:
+        before, after = reference / filename, actual / filename
+        reference_tensors, actual_tensors = load_file(str(before)), load_file(str(after))
+        if set(reference_tensors) != set(actual_tensors):
+            raise RuntimeError("Incomplete native recording")
+        entry = {"file": filename, "reference_sha256": sha256(before), "actual_sha256": sha256(after), "tensors": {}}
+        for key, expected in reference_tensors.items():
+            value = actual_tensors[key]
+            metric = metrics(expected, value)
+            identical = canonical(expected).tobytes() == canonical(value).tobytes()
+            metric["bitwise_equal"] = identical
+            if filename == "initial.safetensors":
+                metric["passed"] = metric["max_abs"] <= 1e-6
+            if exact:
+                metric["passed"] = metric["passed"] and identical
+            result["passed"] = result["passed"] and metric["passed"]
+            entry["tensors"][key] = metric
+        result["files"].append(entry)
+    return result
+
+
+def cropped_image(directory):
+    image = pixels(load_file(str(directory / "step-19.safetensors"))["image"])
+    return image[48:816, :576]
+
+
+def contact_sheet(label, expected, actual):
+    delta = actual.astype(np.int16) - expected.astype(np.int16)
+    result = {"changed_channels": int(np.count_nonzero(delta)), "max_abs": int(np.abs(delta).max()),
+              "mae": float(np.abs(delta).mean()), "exact": bool(np.array_equal(expected, actual))}
+    canvas = Image.new("RGB", (576 * 3, 808), "white")
+    draw = ImageDraw.Draw(canvas)
+    for i, (name, array) in enumerate((("Reference", expected), ("Optimized", actual),
+                                        ("Absolute difference x32", np.clip(np.abs(delta) * 32, 0, 255).astype(np.uint8)))):
+        canvas.paste(Image.fromarray(array), (576 * i, 40))
+        draw.text((576 * i + 10, 12), name, fill="black")
+    canvas.save(output / (label + "-comparison.png"))
+    Image.fromarray(actual).save(output / (label + ".png"))
+    return result
+
+
+save()
+baseline = None
+for label, backend in (("cardigan-a1", "CPU"), ("cardigan-b1", "BLAS"), ("cardigan-b2", "BLAS"), ("cardigan-a2", "CPU")):
+    directory, row = run(label, "cardigan", "bf16", backend, True)
+    actual = load_file(str(directory / "probe.safetensors"))["velocity"]
+    if baseline is None:
+        baseline = actual
+    row["comparison"] = metrics(baseline, actual)
+    row["comparison"]["bitwise_equal"] = baseline.tobytes() == actual.tobytes()
+    save()
+    if not row["comparison"]["passed"] or (backend == "CPU" and not row["comparison"]["bitwise_equal"]):
+        raise RuntimeError("Cardigan warm-control numerical gate failed")
+report["warm_controls"] = {
+    backend: statistics.median([t for name, row in report["runs"].items()
+                                 if name in ("cardigan-a1", "cardigan-a2", "cardigan-b1", "cardigan-b2")
+                                 and row["manifest"]["backend"] == backend
+                                 for t in row["manifest"]["probe_forward_seconds"][1:]])
+    for backend in ("CPU", "BLAS")}
+save()
+
+cardigan_cpu, row = run("cardigan-floating-cpu", "cardigan", "bf16")
+legacy = gallery["cases"]["cardigan-upstream"]["sources"]["native"]
+if sha256(Path(legacy["path"])) != legacy["sha256"]:
+    raise RuntimeError("Historical floating cardigan PNG changed")
+with Image.open(legacy["path"]) as image:
+    expected = np.asarray(image)
+row["legacy_pixels"] = contact_sheet("cardigan-floating-cpu", expected, cropped_image(cardigan_cpu))
+save()
+if not row["legacy_pixels"]["exact"]:
+    raise RuntimeError("Optimized floating CPU did not preserve historical cardigan pixels")
+
+cardigan_blas, row = run("cardigan-floating-blas", "cardigan", "bf16", "BLAS")
+row["native_trajectory_comparison"] = compare_recordings(cardigan_cpu, cardigan_blas, False)
+row["pixels"] = contact_sheet("cardigan-floating-blas", cropped_image(cardigan_cpu), cropped_image(cardigan_blas))
+save()
+if not row["native_trajectory_comparison"]["passed"]:
+    raise RuntimeError("BLAS cardigan trajectory gate failed")
+
+for case, precision, old_name in (
+    ("bottoms", "q8", "checkpoint26-q8-bottoms"),
+    ("cardigan", "mixed", "checkpoint30-mixed-top4-cardigan"),
+    ("bottoms", "mixed", "checkpoint30-mixed-top4-bottoms"),
+    ("cardigan", "q8", "checkpoint26-q8-cardigan"),
+):
+    label = f"{case}-{precision}"
+    directory, row = run(label, case, precision)
+    row["same_policy_comparison"] = compare_recordings(ROOT / old_name, directory, True)
+    row["same_policy_pixels"] = contact_sheet(label, cropped_image(ROOT / old_name), cropped_image(directory))
+    row["legacy_measurement_sha256"] = sha256(ROOT / (old_name + "-measurement") / "measurement.json")
+    save()
+    if not row["same_policy_comparison"]["passed"] or not row["same_policy_pixels"]["exact"]:
+        raise RuntimeError(f"{label} changed same-policy outputs")
+    print(label, row["manifest"]["sampling_seconds"], row["measurement"]["peak_working_set_bytes"], "bitwise passed", flush=True)
+
+if {str(p): sha256(p) for p in sources} != provenance:
+    raise RuntimeError("Input/executable provenance changed during the acceptance batch")
+report["passed"] = True
+report["quantized_floating_quality_accepted"] = False
+report["note"] = "Original tops is a third photographic case, distinct from cardigan. Cardigan native/BLAS full trajectories are newly compared; historical upstream agreement for cardigan is final-image evidence, not a Python intermediate trajectory."
+save()
+print("Integrated full-recording acceptance completed", flush=True)

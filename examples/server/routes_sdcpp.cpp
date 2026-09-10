@@ -200,8 +200,11 @@ static json make_vid_gen_features_json() {
 }
 
 static json make_capabilities_json(ServerRuntime& runtime) {
-    refresh_lora_cache(runtime);
-    refresh_upscaler_cache(runtime);
+    const bool supports_try_on = runtime_supports_generation_mode(runtime, TRY_ON);
+    if (!supports_try_on) {
+        refresh_lora_cache(runtime);
+        refresh_upscaler_cache(runtime);
+    }
 
     AsyncJobManager& manager  = *runtime.async_job_manager;
     const auto& defaults      = *runtime.default_gen_params;
@@ -279,6 +282,9 @@ static json make_capabilities_json(ServerRuntime& runtime) {
     if (supports_vid) {
         supported_modes.push_back("vid_gen");
     }
+    if (supports_try_on) {
+        supported_modes.push_back("try_on");
+    }
 
     std::string default_img_output_format = "png";
     std::string default_vid_output_format = "avi";
@@ -292,6 +298,15 @@ static json make_capabilities_json(ServerRuntime& runtime) {
     json defaults_by_mode       = json::object();
     json output_formats_by_mode = json::object();
     json features_by_mode       = json::object();
+    if (supports_try_on) {
+        sd_try_on_params_t params;
+        sd_try_on_params_init(&params);
+        defaults_by_mode["try_on"] = {
+            {"steps", params.steps}, {"cfg", params.cfg}, {"shift", params.shift}, {"skip_cfg_last_n_steps", params.skip_cfg_last_n_steps}, {"seed", params.seed}, {"sample_count", params.sample_count}, {"rng", "cpu"}};
+        output_formats_by_mode["try_on"] = json::array({"png"});
+        features_by_mode["try_on"]       = {
+            {"prepared_inputs", true}, {"raw_image_preprocessing", false}, {"crop", true}, {"cancel_queued", true}, {"cancel_generating", true}, {"progress", true}, {"categories", json::array({"tops", "bottoms", "one-pieces"})}};
+    }
     if (supports_img) {
         defaults_by_mode["img_gen"]       = make_img_gen_defaults_json(defaults, default_img_output_format);
         output_formats_by_mode["img_gen"] = image_output_formats;
@@ -310,7 +325,12 @@ static json make_capabilities_json(ServerRuntime& runtime) {
               {"cancel_generating", false},
     };
     std::string current_mode = "";
-    if (supports_img) {
+    if (supports_try_on) {
+        current_mode             = "try_on";
+        top_level_defaults       = defaults_by_mode["try_on"];
+        top_level_output_formats = output_formats_by_mode["try_on"];
+        top_level_features       = features_by_mode["try_on"];
+    } else if (supports_img) {
         current_mode             = "img_gen";
         top_level_defaults       = defaults_by_mode["img_gen"];
         top_level_output_formats = output_formats_by_mode["img_gen"];
@@ -339,6 +359,8 @@ static json make_capabilities_json(ServerRuntime& runtime) {
                   {"max_height", 4096},
                   {"max_batch_count", 8},
                   {"max_queue_size", manager.max_pending_jobs},
+                  {"completed_job_ttl_seconds", manager.completed_ttl_seconds},
+                  {"failed_job_ttl_seconds", manager.failed_ttl_seconds},
     };
     result["samplers"]               = samplers;
     result["schedulers"]             = schedulers;
@@ -348,6 +370,29 @@ static json make_capabilities_json(ServerRuntime& runtime) {
     result["features_by_mode"]       = features_by_mode;
     result["loras"]                  = available_loras;
     result["upscalers"]              = available_upscalers;
+    if (supports_try_on) {
+        {
+            std::lock_guard<std::mutex> lock(manager.mutex);
+            purge_expired_jobs(manager);
+            result["limits"]["max_try_on_image_bytes"] = manager.max_try_on_image_bytes;
+            result["limits"]["reserved_try_on_image_bytes"] = reserved_try_on_image_bytes(manager);
+        }
+        result["limits"]["min_width"] = result["limits"]["max_width"] = 576;
+        result["limits"]["min_height"] = result["limits"]["max_height"] = 864;
+        result["limits"]["max_batch_count"]                             = 4;
+        result["limits"]["max_request_bytes"]                           = SD_TRY_ON_MAX_REQUEST_BYTES;
+        result["limits"]["max_encoded_image_bytes"]                     = SD_PREPARED_IMAGE_MAX_ENCODED_SIZE;
+        result["limits"]["max_raw_pixels"] = SD_RAW_IMAGE_MAX_PIXELS;
+        result["limits"]["max_raw_dimension"] = SD_RAW_IMAGE_MAX_DIMENSION;
+        result["features"]["raw_image_preprocessing"] = runtime.try_on_preparer != nullptr;
+        result["features"]["raw_parser_modes"] = runtime.try_on_parser_enabled;
+        result["features_by_mode"]["try_on"]["raw_image_preprocessing"] = runtime.try_on_preparer != nullptr;
+        result["features_by_mode"]["try_on"]["raw_parser_modes"] = runtime.try_on_parser_enabled;
+        result["samplers"]                                              = json::array();
+        result["schedulers"]                                            = json::array();
+        result["loras"]                                                 = json::array();
+        result["upscalers"]                                             = json::array();
+    }
     return result;
 }
 
@@ -407,6 +452,59 @@ static bool parse_vid_gen_request(const json& body,
 
 void register_sdcpp_api_endpoints(httplib::Server& svr, ServerRuntime& rt) {
     ServerRuntime* runtime = &rt;
+
+    svr.Post("/sdcpp/v1/try_on", [runtime](const httplib::Request& req, httplib::Response& res) {
+        if (!runtime_supports_generation_mode(*runtime, TRY_ON)) {
+            res.status = 400;
+            res.set_content(json({{"error", unsupported_generation_mode_error(TRY_ON)}}).dump(), "application/json");
+            return;
+        }
+        if (req.body.size() > SD_TRY_ON_MAX_REQUEST_BYTES) {
+            res.status = 413;
+            res.set_content(R"({"error":"try_on request exceeds size limit"})", "application/json");
+            return;
+        }
+        auto body = json::parse(req.body, nullptr, false);
+        TryOnJobRequest request;
+        std::string error;
+        if (!parse_try_on_request(body, request, error, runtime->try_on_preparer != nullptr, runtime->try_on_parser_enabled)) {
+            res.status = 400;
+            res.set_content(json({{"error", error}}).dump(), "application/json");
+            return;
+        }
+        auto job      = std::make_shared<AsyncGenerationJob>();
+        job->kind     = AsyncJobKind::TryOn;
+        job->try_on   = std::move(request);
+        job->total_steps = job->try_on.inputs.params.steps * job->try_on.inputs.params.sample_count;
+        auto& manager = *runtime->async_job_manager;
+        json response;
+        {
+            std::lock_guard<std::mutex> lock(manager.mutex);
+            if (manager.stop) {
+                res.status = 503;
+                res.set_content(R"({"error":"server is shutting down"})", "application/json");
+                return;
+            }
+            purge_expired_jobs(manager);
+            if (count_pending_jobs(manager) >= manager.max_pending_jobs) {
+                res.status = 429;
+                res.set_content(R"({"error":"job queue is full"})", "application/json");
+                return;
+            }
+            job->id               = make_async_job_id(manager);
+            if (!reserve_try_on_images(manager, *job)) {
+                res.status = 429;
+                res.set_content(R"({"error":"try_on image memory budget is full"})", "application/json");
+                return;
+            }
+            manager.jobs[job->id] = job;
+            manager.queue.push_back(job->id);
+            response = {{"id", job->id}, {"kind", "try_on"}, {"status", "queued"}, {"created", job->created_at}, {"poll_url", "/sdcpp/v1/jobs/" + job->id}};
+        }
+        manager.cv.notify_one();
+        res.status = 202;
+        res.set_content(response.dump(), "application/json");
+    });
 
     svr.Get("/sdcpp/v1/capabilities", [runtime](const httplib::Request&, httplib::Response& res) {
         res.status = 200;
@@ -590,6 +688,12 @@ void register_sdcpp_api_endpoints(httplib::Server& svr, ServerRuntime& rt) {
         }
 
         if (job.status == AsyncJobStatus::Generating) {
+            if (job.kind == AsyncJobKind::TryOn) {
+                job.cancellation_requested.store(true);
+                res.status = 202;
+                res.set_content(make_async_job_json(manager, job).dump(), "application/json");
+                return;
+            }
             res.status = 409;
             res.set_content(R"({"error":"job is currently generating and cannot be interrupted yet"})", "application/json");
             return;

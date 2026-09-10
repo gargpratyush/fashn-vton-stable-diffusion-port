@@ -1,0 +1,134 @@
+"""Check the generated history using local hashes, Pillow and the existing Chromium environment."""
+import base64
+import hashlib
+from html.parser import HTMLParser
+import io
+import json
+from pathlib import Path
+from urllib.parse import urlsplit
+from urllib.request import url2pathname
+
+from PIL import Image
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(r"C:\source\fashn-vton-reference\reports")
+PAGE = ROOT / "fashn-vton-project-history.html"
+SESSION = Path(r"<USER_HOME>\.copilot\session-state\24fcff7d-3f4e-44b0-92cb-0a411c3c64ff\files")
+provenance = json.loads(PAGE.with_suffix(".provenance.json").read_text())
+contents = PAGE.read_bytes()
+assert hashlib.sha256(contents).hexdigest() == provenance["html_sha256"]
+assert b"\x00" not in contents
+
+
+class Inspect(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.ids = []
+        self.links = []
+        self.images = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if "id" in attrs:
+            self.ids.append(attrs["id"])
+        if tag == "a":
+            self.links.append(attrs["href"])
+        if tag == "img":
+            assert attrs.get("alt")
+            self.images.append(attrs["src"])
+        if tag in ("script", "link"):
+            assert "src" not in attrs and attrs.get("rel") != "stylesheet"
+
+
+parsed = Inspect()
+parsed.feed(contents.decode("utf-8"))
+assert len(parsed.ids) == len(set(parsed.ids))
+assert [c["number"] for c in provenance["chapters"]] == list(range(1, 39))
+assert len(provenance["code_excerpts"]) == 42
+assert len(parsed.images) == len(provenance["illustrations"]) == 22
+for href in parsed.links:
+    if href.startswith("#"):
+        assert href[1:] in parsed.ids, href
+    elif href.startswith("file:"):
+        assert Path(url2pathname(urlsplit(href).path)).exists(), href
+    else:
+        assert href.startswith(("https://", "http://")), href
+for uri in parsed.images:
+    assert uri.startswith("data:image/")
+image_hashes = []
+for uri in parsed.images:
+    data = base64.b64decode(uri.split(",", 1)[1], validate=True)
+    with Image.open(io.BytesIO(data)) as image:
+        image.verify()
+    image_hashes.append(hashlib.sha256(data).hexdigest())
+assert sorted(image_hashes) == sorted(i["sha256"] for i in provenance["illustrations"])
+
+expected_excerpts = []
+for item in provenance["code_excerpts"]:
+    lines = Path(item["path"]).read_text(encoding="utf-8-sig").splitlines()
+    excerpt = "\n".join(lines[item["first_line"]-1:item["last_line"]])
+    assert hashlib.sha256(excerpt.encode()).hexdigest() == item["excerpt_sha256"]
+    expected_excerpts.append(excerpt)
+for path, expected in provenance["sources"].items():
+    assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == expected["sha256"], path
+
+errors = []
+network = []
+with sync_playwright() as playwright:
+    browser = playwright.chromium.launch(headless=True)
+    context = browser.new_context(viewport={"width": 1440, "height": 1000})
+
+    def route(request):
+        if request.request.url.startswith(("http://", "https://")):
+            network.append(request.request.url)
+            request.abort()
+        else:
+            request.continue_()
+
+    context.route("**/*", route)
+    page = context.new_page()
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(PAGE.as_uri(), wait_until="load")
+    assert page.locator("article.chapter").count() == 38
+    assert page.locator(".source").count() == 42
+    actual_excerpts = page.locator(".source pre code").evaluate_all("""nodes => nodes.map(node =>
+      Array.from(node.querySelectorAll('.code-line')).map(line => {
+        const clone = line.cloneNode(true);
+        clone.querySelector('.line-no').remove();
+        return clone.textContent;
+      }).join('\\n'))""")
+    assert actual_excerpts == expected_excerpts
+    page.add_style_tag(content="html{scroll-behavior:auto!important}")
+    page.locator("#nav-search").fill("parser")
+    assert 0 < page.locator(".nav-link:visible").count() < page.locator(".nav-link").count()
+    page.locator("#nav-search").fill("")
+    page.locator('a.nav-link[href="#cp-38"]').click()
+    assert page.url.endswith("#cp-38")
+    page.evaluate("location.hash = 'archive-original-plan'")
+    page.wait_for_function("document.querySelector('#archive-original-plan .report-detail').open")
+    page.locator("#expand-reports").click()
+    assert page.locator("details.report-detail[open]").count() == 21
+    page.locator("#collapse-reports").click()
+    assert page.locator("details.report-detail[open]").count() == 0
+    assert page.locator("#all-matrices tbody tr").count() == 104
+    page.evaluate("""async () => {
+      for (const image of document.images) { image.loading = 'eager'; await image.decode(); }
+    }""")
+    assert page.locator("img").evaluate_all("images => images.every(i => i.naturalWidth > 0)")
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), "Desktop horizontal overflow"
+    page.evaluate("location.hash = ''; scrollTo(0,0); document.querySelector('.sidebar').scrollTop = 0")
+    page.screenshot(path=str(SESSION / "fashn-project-history-preview.png"), full_page=False)
+    page.set_viewport_size({"width": 390, "height": 844})
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), "Mobile horizontal overflow"
+    assert not errors, errors
+    assert not network, network
+    browser.close()
+
+result = {"passed": True, "html_sha256": provenance["html_sha256"], "chapters": 38,
+          "exact_code_excerpts": 42, "embedded_images": 22, "embedded_reports": 21,
+          "complete_matrix_rows": 104, "all_local_links_exist": True,
+          "all_embedded_images_decode": True, "browser_errors": errors,
+          "external_network_requests": network, "desktop_and_mobile_overflow": False,
+          "preview": str(SESSION / "fashn-project-history-preview.png")}
+PAGE.with_suffix(".validation.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+print(json.dumps(result, indent=2))

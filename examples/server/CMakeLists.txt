@@ -1,4 +1,8 @@
 set(TARGET sd-server)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS try_on.html try_on.js)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/try_on.html" FASHN_TRY_ON_HTML)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/try_on.js" FASHN_TRY_ON_JS)
+configure_file(try_on_assets.h.in "${CMAKE_CURRENT_BINARY_DIR}/try_on_assets.h" @ONLY)
 
 option(SD_SERVER_BUILD_FRONTEND "Build server frontend with pnpm" ON)
 
@@ -66,14 +70,23 @@ add_executable(${TARGET}
     ../common/common.cpp
     ../common/log.cpp
     ../common/media_io.cpp
+    ../common/try_on.cpp
     main.cpp
     runtime.cpp
     async_jobs.cpp
+    try_on_jobs.cpp
+    try_on_preprocessing.cpp
     routes_index.cpp
     routes_openai.cpp
     routes_sdapi.cpp
     routes_sdcpp.cpp
 )
+target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+if(SD_FASHN_PREPROCESS)
+    target_compile_definitions(${TARGET} PRIVATE SD_FASHN_PREPROCESS)
+    target_link_libraries(${TARGET} PRIVATE fashn-preprocessing)
+    fashn_copy_runtime(${TARGET})
+endif()
 if(APPLE)
     sd_set_macos_rpaths(${TARGET})
 endif()

@@ -1,0 +1,42 @@
+{
+  "metrics": {
+    "changed_channels": 23,
+    "total_channels": 1327104,
+    "changed_pixels": 23,
+    "max_abs": 1.0,
+    "mae": 1.7330970293209876e-05,
+    "rmse": 0.004163048197320069,
+    "psnr_db": 95.74257483024704
+  },
+  "sources": {
+    "person": {
+      "path": "local-experiment\\quality-fixtures\\model_5.png",
+      "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+    },
+    "garment": {
+      "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+      "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+    },
+    "native": {
+      "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-blas\\step-19.safetensors",
+      "sha256": "72c5ea947d33dac100a1f0d9e4c2364ec57e5b9ce1e7cca14a01cc2680cd4ba0",
+      "crop": {
+        "x": 0,
+        "y": 48,
+        "width": 576,
+        "height": 768
+      }
+    },
+    "reference": {
+      "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+      "sha256": "3aa69d62cbb797d319c1d4b180bf46888ac658a9d433c361f6f6d936fd374265",
+      "crop": {
+        "x": 0,
+        "y": 48,
+        "width": 576,
+        "height": 768
+      }
+    }
+  },
+  "scope": "Same 20 steps, CFG1.5, shift1.5, skip1, seed42 and crop. Full native floating trajectory agreement is recorded separately."
+}

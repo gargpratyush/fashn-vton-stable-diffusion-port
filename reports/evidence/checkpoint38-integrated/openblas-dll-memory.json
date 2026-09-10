@@ -1,0 +1,58 @@
+[
+  {
+    "requested_threads": 1,
+    "actual_threads": 1,
+    "before": {
+      "working_set_bytes": 25952256,
+      "private_commit_bytes": 8507392
+    },
+    "after": {
+      "working_set_bytes": 26222592,
+      "private_commit_bytes": 8769536
+    },
+    "private_delta_bytes": 262144,
+    "scope": "Fresh interpreter; only the official OpenBLAS DLL is loaded, no NumPy, GGML or model."
+  },
+  {
+    "requested_threads": 4,
+    "actual_threads": 4,
+    "before": {
+      "working_set_bytes": 26062848,
+      "private_commit_bytes": 8613888
+    },
+    "after": {
+      "working_set_bytes": 26390528,
+      "private_commit_bytes": 412426240
+    },
+    "private_delta_bytes": 403812352,
+    "scope": "Fresh interpreter; only the official OpenBLAS DLL is loaded, no NumPy, GGML or model."
+  },
+  {
+    "requested_threads": 8,
+    "actual_threads": 8,
+    "before": {
+      "working_set_bytes": 26034176,
+      "private_commit_bytes": 8581120
+    },
+    "after": {
+      "working_set_bytes": 26435584,
+      "private_commit_bytes": 950452224
+    },
+    "private_delta_bytes": 941871104,
+    "scope": "Fresh interpreter; only the official OpenBLAS DLL is loaded, no NumPy, GGML or model."
+  },
+  {
+    "requested_threads": 16,
+    "actual_threads": 16,
+    "before": {
+      "working_set_bytes": 26030080,
+      "private_commit_bytes": 8581120
+    },
+    "after": {
+      "working_set_bytes": 26587136,
+      "private_commit_bytes": 2026582016
+    },
+    "private_delta_bytes": 2018000896,
+    "scope": "Fresh interpreter; only the official OpenBLAS DLL is loaded, no NumPy, GGML or model."
+  }
+]

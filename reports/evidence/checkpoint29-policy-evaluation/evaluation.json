@@ -1,0 +1,759 @@
+{
+  "complete": true,
+  "graph_sha256": "c4b6586f016712f5bc38bca41cc448c2ba5dd329f1e0407db7e2233f609f10c2",
+  "checkpoint_sha256": "d6cd38286885bc29fa487ea9383f80ffeb95862e7747c630d42c5d3c05bdd35a",
+  "matrix_map_sha256": "7579427935922573a91e6706e6caeda6e0a66a3d73eb364126f802d6c1b9faec",
+  "threads": 16,
+  "policies": {
+    "top1": {
+      "sha256": "2b5b3e66787b6f906d53c0a124be8417425f991d66cadce0bcfdbf6d65965829",
+      "matrices": [
+        "single_blocks.12.linear1.weight"
+      ]
+    },
+    "top2": {
+      "sha256": "d43e1bad0e766f8a87f48ed3b0f5bba5af90bf0a520753f1a4f3f9ec52fdf105",
+      "matrices": [
+        "single_blocks.12.linear1.weight",
+        "single_blocks.11.linear1.weight"
+      ]
+    },
+    "top4": {
+      "sha256": "b233b25b08422de16feef72442250469d01ab80533e2858504e10767aabf59b3",
+      "matrices": [
+        "single_blocks.12.linear1.weight",
+        "single_blocks.11.linear1.weight",
+        "single_blocks.8.linear1.weight",
+        "single_blocks.14.linear1.weight"
+      ]
+    },
+    "branch-pair": {
+      "sha256": "50c71c8346d18d0922301e7d958fcbaef85aaa21ddc011a5902211b8ed570209",
+      "matrices": [
+        "single_blocks.12.linear1.weight",
+        "single_blocks.14.linear1.weight"
+      ]
+    }
+  },
+  "fixtures": {
+    "t0": {
+      "manifest.json": "ed3f3a531ef64376194c5f15d383ec730011acbf1b72a987a1061b33f4205cc5",
+      "inputs.safetensors": "37d9637fbd83dcae9c458c4c1bc2b01ea503a2ab0d7c29c439f5f7cbb81b02f9",
+      "conditional.safetensors": "cd97cf4d639d23037b3a901f7fa7a75dbf2e7802402b3a7aa6dee013c9df07f8",
+      "unconditional.safetensors": "7ebd944e78b492aed7519e40a4ff50dc14e4738de5a3b6b294bfc8cda646f340"
+    },
+    "t15": {
+      "manifest.json": "80a356281820afe3ebe7d341626fb65256da3185e7e0a8a217719794a2f5cb8f",
+      "inputs.safetensors": "d3c5129ea7c0f4ae5fdb4cfff4125e595df9d32c0f25c297945ff256ccabb21d",
+      "conditional.safetensors": "dee24ea7ce81e98923fa0507a0bfe7bc03cc70ff22bcc9bdd8e6775fb2babfa6",
+      "unconditional.safetensors": "b7416b1e33675072d5dbaaad49b7273d5b0da3979d8e93cf1d4fd2fc11e2fd90"
+    }
+  },
+  "results": {
+    "t0": {
+      "all-q8": {
+        "summary": {
+          "score": 0.0026250718827487396,
+          "velocity_relative_l2": {
+            "conditional": 0.0026250718827487396,
+            "unconditional": 0.001676649963343697
+          },
+          "max_capture_relative_l2": 0.0313682405895017,
+          "failed_captures": 19,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\all-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\all-q8\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 107.69234139999026,
+          "peak_working_set_bytes": 5082640384,
+          "sampled_peak_private_bytes": 3159248896,
+          "memory_samples": 510,
+          "last_memory_sample_seconds": 107.49173690000316,
+          "launcher_pid": 40548,
+          "monitored_pid": 40548,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\all-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\all-q8\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t0\\all-q8",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "c3c2e41c1bee5100e9fd3089831cddbef3ca015040073cd25c99b739faa51bad",
+          "policy.json": "e95b128b43aea53c7bac4a2ffd34905b59bb9940e55c3a9f1fe3900df3c94a6a",
+          "measurement.json": "d92e9de6936915b0490e9d2d340970fbd551a1545ca1c0be71fa55c245b23b43"
+        }
+      },
+      "top1": {
+        "summary": {
+          "score": 0.0015574260378962226,
+          "velocity_relative_l2": {
+            "conditional": 0.0013878255571550871,
+            "unconditional": 0.0015574260378962226
+          },
+          "max_capture_relative_l2": 0.0313682405895017,
+          "failed_captures": 19,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top1",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top1\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 104.22713149999618,
+          "peak_working_set_bytes": 5116375040,
+          "sampled_peak_private_bytes": 3293499392,
+          "memory_samples": 498,
+          "last_memory_sample_seconds": 104.02657239997643,
+          "launcher_pid": 29480,
+          "monitored_pid": 29480,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top1",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top1\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t0\\top1",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "a558db90019a7e7b946922367f27749d6bad3085bc5b063ba0b38acd928788b2",
+          "policy.json": "2b5b3e66787b6f906d53c0a124be8417425f991d66cadce0bcfdbf6d65965829",
+          "measurement.json": "c1ee0423aeda6101ab83d49a569652ff2cd21e2e0477285995e585851911da0b"
+        }
+      },
+      "top2": {
+        "summary": {
+          "score": 0.0015441205984169793,
+          "velocity_relative_l2": {
+            "conditional": 0.001241937009736441,
+            "unconditional": 0.0015441205984169793
+          },
+          "max_capture_relative_l2": 0.0313682405895017,
+          "failed_captures": 19,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top2",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top2\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 104.43416679999791,
+          "peak_working_set_bytes": 5150248960,
+          "sampled_peak_private_bytes": 3346264064,
+          "memory_samples": 499,
+          "last_memory_sample_seconds": 104.23380509999697,
+          "launcher_pid": 42516,
+          "monitored_pid": 42516,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top2",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top2\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t0\\top2",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "3bf68da24900b69552b2d5ace8b61e06e5c79097bae874b3cae23a222ec98e08",
+          "policy.json": "d43e1bad0e766f8a87f48ed3b0f5bba5af90bf0a520753f1a4f3f9ec52fdf105",
+          "measurement.json": "4f323129cd4f0edf56fae958a839da3f3cfb99718c570ee296afaca9324e2646"
+        }
+      },
+      "top4": {
+        "summary": {
+          "score": 0.0012749801208418953,
+          "velocity_relative_l2": {
+            "conditional": 0.0009584650433244217,
+            "unconditional": 0.0012749801208418953
+          },
+          "max_capture_relative_l2": 0.0313682405895017,
+          "failed_captures": 17,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top4",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top4\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 105.44941859997925,
+          "peak_working_set_bytes": 5217599488,
+          "sampled_peak_private_bytes": 3294588928,
+          "memory_samples": 502,
+          "last_memory_sample_seconds": 105.24891259998549,
+          "launcher_pid": 13044,
+          "monitored_pid": 13044,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top4",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\top4\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t0\\top4",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "af5c348489a72d3d17210d87d066ddd5b144655f7af9cbb97f0e97c322972460",
+          "policy.json": "b233b25b08422de16feef72442250469d01ab80533e2858504e10767aabf59b3",
+          "measurement.json": "c250bc206c0f367dd30184562dde5f0c109ea692542d3d7a987fc239248cebd5"
+        }
+      },
+      "branch-pair": {
+        "summary": {
+          "score": 0.0013461362099057338,
+          "velocity_relative_l2": {
+            "conditional": 0.001292444714670104,
+            "unconditional": 0.0013461362099057338
+          },
+          "max_capture_relative_l2": 0.0313682405895017,
+          "failed_captures": 19,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\branch-pair",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\branch-pair\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 103.84712130000116,
+          "peak_working_set_bytes": 5150191616,
+          "sampled_peak_private_bytes": 3227090944,
+          "memory_samples": 496,
+          "last_memory_sample_seconds": 103.64624909998383,
+          "launcher_pid": 19336,
+          "monitored_pid": 19336,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\branch-pair",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\branch-pair\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t0\\branch-pair",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "f14d714c6407eb854607fe69caf90181975a01826e146436db30e2d0b7e27db6",
+          "policy.json": "50c71c8346d18d0922301e7d958fcbaef85aaa21ddc011a5902211b8ed570209",
+          "measurement.json": "4237c0345e392ddbee1b2f0fbc1506c840ca977cc2f4c90132529fd0f3fa7b90"
+        }
+      },
+      "weight-only-q8": {
+        "summary": {
+          "score": 0.0010505147443934345,
+          "velocity_relative_l2": {
+            "conditional": 0.0008045028212956171,
+            "unconditional": 0.0010505147443934345
+          },
+          "max_capture_relative_l2": 0.012347177423188938,
+          "failed_captures": 16,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\weight-only-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\weight-only-q8\\policy.json",
+            "--upcast-matrices"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 131.33943100000033,
+          "peak_working_set_bytes": 5083729920,
+          "sampled_peak_private_bytes": 3160559616,
+          "memory_samples": 620,
+          "last_memory_sample_seconds": 131.13868550001644,
+          "launcher_pid": 42412,
+          "monitored_pid": 42412,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\weight-only-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t0\\weight-only-q8\\policy.json",
+            "--upcast-matrices"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t0\\weight-only-q8",
+        "upcast_matrices": true,
+        "artifacts_sha256": {
+          "comparison.json": "6219056fe01a98a2b67061701796a9d21b0abdf2d507af4282759dc96e353289",
+          "policy.json": "e95b128b43aea53c7bac4a2ffd34905b59bb9940e55c3a9f1fe3900df3c94a6a",
+          "measurement.json": "96e6c16de0eae88d0ceee840f245956b2935c381842d382635e3e2e692167c07"
+        }
+      }
+    },
+    "t15": {
+      "all-q8": {
+        "summary": {
+          "score": 0.0034749969411752633,
+          "velocity_relative_l2": {
+            "conditional": 0.0034749969411752633,
+            "unconditional": 0.0017850880230402479
+          },
+          "max_capture_relative_l2": 0.07225985912832625,
+          "failed_captures": 20,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\all-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\all-q8\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 103.76311889998033,
+          "peak_working_set_bytes": 5082730496,
+          "sampled_peak_private_bytes": 3159318528,
+          "memory_samples": 498,
+          "last_memory_sample_seconds": 103.56254159999662,
+          "launcher_pid": 10892,
+          "monitored_pid": 10892,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\all-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\all-q8\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t15\\all-q8",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "1393dd50c9a0231c36c0e5b7d59932bb47f88fbc5f3fedc7bfc9957d84e73ef8",
+          "policy.json": "e95b128b43aea53c7bac4a2ffd34905b59bb9940e55c3a9f1fe3900df3c94a6a",
+          "measurement.json": "89e5e1282b3f971de91667b014456423aa2aa78f3730a3bed2c8110cbe214046"
+        }
+      },
+      "top1": {
+        "summary": {
+          "score": 0.0018426699246226323,
+          "velocity_relative_l2": {
+            "conditional": 0.0018426699246226323,
+            "unconditional": 0.0014979146869232762
+          },
+          "max_capture_relative_l2": 0.07225985912832625,
+          "failed_captures": 20,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top1",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top1\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 103.84168169999612,
+          "peak_working_set_bytes": 5116588032,
+          "sampled_peak_private_bytes": 3193249792,
+          "memory_samples": 496,
+          "last_memory_sample_seconds": 103.64125849999255,
+          "launcher_pid": 25096,
+          "monitored_pid": 25096,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top1",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top1\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t15\\top1",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "7ef69c80f5d0815c424b63e9c1649667817a44c451c7f28d84efd1f765540036",
+          "policy.json": "2b5b3e66787b6f906d53c0a124be8417425f991d66cadce0bcfdbf6d65965829",
+          "measurement.json": "b68c1f7e14225c0f6adb95fda2e43adc59111d13ecf973b25e9286b22b2f08e4"
+        }
+      },
+      "top2": {
+        "summary": {
+          "score": 0.0015640205837217033,
+          "velocity_relative_l2": {
+            "conditional": 0.0015640205837217033,
+            "unconditional": 0.0014254591554960887
+          },
+          "max_capture_relative_l2": 0.07225985912832625,
+          "failed_captures": 20,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top2",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top2\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 104.52634700000635,
+          "peak_working_set_bytes": 5150224384,
+          "sampled_peak_private_bytes": 3226976256,
+          "memory_samples": 499,
+          "last_memory_sample_seconds": 104.3258332000114,
+          "launcher_pid": 42704,
+          "monitored_pid": 42704,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top2",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top2\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t15\\top2",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "e6eb05720071d2b3d18954d24e262f55530bf2d693f3cd918ee99cd26407f761",
+          "policy.json": "d43e1bad0e766f8a87f48ed3b0f5bba5af90bf0a520753f1a4f3f9ec52fdf105",
+          "measurement.json": "be90f24fccdad5b23cd8cb3cdffc8b5e1f922234961a49549c7ecae81c89196d"
+        }
+      },
+      "top4": {
+        "summary": {
+          "score": 0.0012152331454880795,
+          "velocity_relative_l2": {
+            "conditional": 0.0011902909400304767,
+            "unconditional": 0.0012152331454880795
+          },
+          "max_capture_relative_l2": 0.07225985912832625,
+          "failed_captures": 20,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top4",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top4\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 105.40049969998654,
+          "peak_working_set_bytes": 5217411072,
+          "sampled_peak_private_bytes": 3294253056,
+          "memory_samples": 506,
+          "last_memory_sample_seconds": 105.20002689998364,
+          "launcher_pid": 42628,
+          "monitored_pid": 42628,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top4",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\top4\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t15\\top4",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "8df8ff81f8b8114caf02ea0a7f07bb29bd280fcc5719df2bf76ea50dfd1cd1b4",
+          "policy.json": "b233b25b08422de16feef72442250469d01ab80533e2858504e10767aabf59b3",
+          "measurement.json": "c04c4027ec0d5433f66e825ecd8cd6d855f4095322b1ef1a41b9544a6fc82d3f"
+        }
+      },
+      "branch-pair": {
+        "summary": {
+          "score": 0.0017551887694323715,
+          "velocity_relative_l2": {
+            "conditional": 0.0017551887694323715,
+            "unconditional": 0.0013721612276005315
+          },
+          "max_capture_relative_l2": 0.07225985912832625,
+          "failed_captures": 20,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\branch-pair",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\branch-pair\\policy.json"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 104.27237200000673,
+          "peak_working_set_bytes": 5150138368,
+          "sampled_peak_private_bytes": 3292528640,
+          "memory_samples": 498,
+          "last_memory_sample_seconds": 104.07159770000726,
+          "launcher_pid": 33012,
+          "monitored_pid": 33012,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\branch-pair",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\branch-pair\\policy.json"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t15\\branch-pair",
+        "upcast_matrices": false,
+        "artifacts_sha256": {
+          "comparison.json": "cd7b2a8e913109dc657252e9f9a570440060230dc3fb7c65c3f1423b06f8e894",
+          "policy.json": "50c71c8346d18d0922301e7d958fcbaef85aaa21ddc011a5902211b8ed570209",
+          "measurement.json": "7c6e86fc2b310c00175e05841bc026e8dbdf2f866a83c65d6911f22c246cf6ed"
+        }
+      },
+      "weight-only-q8": {
+        "summary": {
+          "score": 0.001023060248405516,
+          "velocity_relative_l2": {
+            "conditional": 0.001023060248405516,
+            "unconditional": 0.0007557981010757157
+          },
+          "max_capture_relative_l2": 0.03260408216671376,
+          "failed_captures": 16,
+          "numerical_gate_passed": false
+        },
+        "measurement": {
+          "command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\weight-only-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\weight-only-q8\\policy.json",
+            "--upcast-matrices"
+          ],
+          "exit_code": 1,
+          "wall_seconds": 129.7830804999976,
+          "peak_working_set_bytes": 5083705344,
+          "sampled_peak_private_bytes": 3160522752,
+          "memory_samples": 619,
+          "last_memory_sample_seconds": 129.5822033000004,
+          "launcher_pid": 41836,
+          "monitored_pid": 41836,
+          "launched_command": [
+            "repository\\build\\bin\\Release\\test-fashn-vton-graph.exe",
+            "local-experiment\\weights\\model.safetensors",
+            "local-experiment\\checkpoint28-photo-native-fixtures-step15",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\weight-only-q8",
+            "--flash-attention",
+            "--matrix-type",
+            "q8_0",
+            "--threads",
+            "16",
+            "--no-capture-files",
+            "--f32-matrices",
+            "local-experiment\\checkpoint29-policy-evaluation\\t15\\weight-only-q8\\policy.json",
+            "--upcast-matrices"
+          ],
+          "memory_scope": "launched_process"
+        },
+        "directory": "local-experiment\\checkpoint29-policy-evaluation\\t15\\weight-only-q8",
+        "upcast_matrices": true,
+        "artifacts_sha256": {
+          "comparison.json": "f5ece08428927cb83cddbed4027a0865b505d4cef574c4737ca01df8da089dab",
+          "policy.json": "e95b128b43aea53c7bac4a2ffd34905b59bb9940e55c3a9f1fe3900df3c94a6a",
+          "measurement.json": "84008525c64cd19331017e828dc436999441f5bf874ced504e6bf053ff28f382"
+        }
+      }
+    }
+  },
+  "scope": "Fixed-state probes; combined policies and weight-only control. Full free-running images still required."
+}

@@ -1,0 +1,123 @@
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+from safetensors.numpy import load_file
+
+ROOT = Path(r"C:\source\fashn-vton-reference")
+REPO = Path(r"C:\source\stable-diffusion.cpp")
+sys.path.insert(0, str(REPO / "scripts"))
+from build_fashn_gallery import build, pixel_metrics
+from compare_fashn_trajectories import metrics, pixels
+from export_fashn_vton_reference import sha256
+
+root = ROOT / "checkpoint38-integrated"
+report = json.loads((root / "results.json").read_text())
+assert report["passed"]
+legacy_gallery = json.loads((ROOT / r"reports\comparison-gallery-v6\manifest.json").read_text())
+crop = {"x": 0, "y": 48, "width": 576, "height": 768}
+float_dirs = {
+    "cardigan": root / "cardigan-floating-cpu",
+    "bottoms": ROOT / r"checkpoint34-full-acceptance\full-trajectory",
+}
+blas_dirs = {
+    "cardigan": root / "cardigan-floating-blas",
+    "bottoms": ROOT / r"checkpoint35-full-acceptance\bottoms",
+}
+summary = {"acceptance_sha256": sha256(root / "results.json"), "runs": {}, "quantized_quality": {},
+           "scope": "Image metrics quantify numerical agreement, not garment fidelity. No public quantized/GPU/BLAS support promotion.",
+           "warm_medians_cardigan": report["warm_controls"]}
+for name, row in report["runs"].items():
+    profile = [json.loads(line) for line in (root / name / "memory-profile.jsonl").read_text().splitlines()]
+    execute = [p for p in profile if p["phase"] == "graph_execute_begin"]
+    assert execute and profile[-1]["phase"] == "model_released"
+    assert all(not p.get("mapped_model_files") for p in profile)
+    assert max(p.get("conversion", {}).get("converted_tensors", 0) for p in profile) == 0
+    manifest = row["manifest"]
+    summary["runs"][name] = {
+        "sampling_seconds": manifest["sampling_seconds"], "process_wall_seconds": row["measurement"]["wall_seconds"],
+        "peak_working_set_bytes": row["measurement"]["peak_working_set_bytes"],
+        "sampled_peak_private_bytes": row["measurement"]["sampled_peak_private_bytes"],
+        "file_size_bytes": Path(row["command"][1]).stat().st_size,
+        "first_execution_elapsed_seconds": execute[0]["elapsed_seconds"],
+        "first_execution_weights": execute[0]["weights"],
+        "last_execution_process": execute[-1]["process"],
+        "workspace_bytes_by_backend": execute[-1]["workspace_bytes_by_backend"],
+        "cache_bytes": execute[-1]["modulation_cache_bytes"],
+        "inactive_modulation_bytes": execute[-1]["inactive_modulation_parameter_bytes"],
+        "mapped_sources": 0, "runtime_weight_conversions": 0,
+        "conversion_scratch_peak_bytes": max(p.get("conversion", {}).get("scratch_peak_bytes", 0) for p in profile),
+        "matrix_types": manifest["matrix_types"], "matrix_backends": manifest["matrix_backends"],
+    }
+
+entries = []
+
+
+def gallery_entry(case, suffix, actual, reference, native_label, reference_label, scope, reference_is_tensor=True):
+    source = legacy_gallery["cases"][case + "-q8"]["sources"]
+    for key in ("person", "garment"):
+        assert sha256(Path(source[key]["path"])) == source[key]["sha256"]
+    entry = {"id": case + "-" + suffix, "title": case.title() + ": " + suffix,
+             "person": source["person"]["path"], "garment": source["garment"]["path"],
+             "native": str(actual), "reference": str(reference), "native_crop": crop,
+             "native_label": native_label, "reference_label": reference_label, "scope": scope}
+    if reference_is_tensor:
+        entry["reference_crop"] = crop
+    entries.append(entry)
+
+
+for case in ("cardigan", "bottoms"):
+    floating = float_dirs[case] / "step-19.safetensors"
+    accelerated = blas_dirs[case] / "step-19.safetensors"
+    upstream = legacy_gallery["cases"][case + "-upstream"]["sources"]["reference"]
+    assert sha256(Path(upstream["path"])) == upstream["sha256"]
+    gallery_entry(case, "blas-floating", accelerated, floating, "BF16 storage / BLAS F32", "BF16 storage / CPU F32",
+                  "Same 20 steps, CFG1.5, shift1.5, skip1, seed42 and crop. Full native floating trajectory agreement is recorded separately.")
+    gallery_entry(case, "blas-upstream", accelerated, Path(upstream["path"]), "Optimized BLAS F32", "Original upstream sampler",
+                  "Original unmodified Python sampler, default attention/batched CFG, versus optimized native BLAS. These are final pixels, not a Python intermediate-trajectory comparison.", False)
+    for policy in ("q8", "mixed"):
+        directory = root / f"{case}-{policy}"
+        states = []
+        for step in range(20):
+            expected = load_file(str(float_dirs[case] / f"step-{step}.safetensors"))
+            actual = load_file(str(directory / f"step-{step}.safetensors"))
+            states.append({"step": step, **{key: metrics(expected[key], actual[key]) for key in ("image", "guided_velocity")}})
+        reference_pixels = pixels(expected["image"])[48:816]
+        actual_pixels = pixels(actual["image"])[48:816]
+        delta = np.abs(actual_pixels.astype(np.int16) - reference_pixels)
+        y, x, channel = np.unravel_index(int(np.argmax(delta)), delta.shape)
+        quality = {
+            "per_step_reference": "Native floating CPU recording, not a Python cardigan intermediate oracle.",
+            "states": states,
+            "failed_image_steps": [s["step"] for s in states if not s["image"]["passed"]],
+            "failed_velocity_steps": [s["step"] for s in states if not s["guided_velocity"]["passed"]],
+            "pixels": pixel_metrics(reference_pixels, actual_pixels),
+            "max_error_location_cropped": {"x": int(x), "y": int(y), "channel": int(channel)},
+            "pixels_max_channel_error_above_16": int(np.count_nonzero(delta.max(axis=2) > 16)),
+            "pixels_max_channel_error_above_32": int(np.count_nonzero(delta.max(axis=2) > 32)),
+            "channel_error_percentiles": {str(p): float(np.percentile(delta, p)) for p in (99, 99.9)},
+            "same_policy_preserved": report["runs"][f"{case}-{policy}"]["same_policy_comparison"]["passed"],
+        }
+        summary["quantized_quality"][f"{case}-{policy}"] = quality
+        gallery_entry(case, policy + "-floating", directory / "step-19.safetensors", floating,
+                      "Optimized Q8" if policy == "q8" else "Optimized mixed 100Q8/4F32", "Native floating CPU",
+                      "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix.")
+    gallery_entry(case, "mixed-q8", root / f"{case}-mixed" / "step-19.safetensors",
+                  root / f"{case}-q8" / "step-19.safetensors", "Mixed 100Q8 / 4F32", "All 104 eligible matrices Q8",
+                  "The four original-value F32 restorations remain frozen from the prior bottoms study. No new tuning; remaining boundary errors are not eliminated.")
+
+spec = ROOT / r"reports\optimization-gallery-spec.json"
+spec.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
+gallery_path = ROOT / r"reports\comparison-gallery-optimized"
+gallery_report = build(spec, gallery_path)
+summary["gallery_manifest_sha256"] = sha256(gallery_path / "manifest.json")
+summary["gallery"] = str(gallery_path / "index.html")
+(root / "final-summary.json").write_text(json.dumps(summary, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+for name, quality in summary["quantized_quality"].items():
+    print(name, quality["pixels"], "failed image/velocity steps", len(quality["failed_image_steps"]),
+          len(quality["failed_velocity_steps"]), "worst location", quality["max_error_location_cropped"])
+for name, row in summary["runs"].items():
+    if "floating" in name or name.endswith(("-q8", "-mixed")):
+        print(name, "weights", row["first_execution_weights"], "workspace", row["workspace_bytes_by_backend"])
+print("Gallery cases:", len(gallery_report["cases"]))

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local FASHN try-on</title>
+  <style>
+    :root { color-scheme: light dark; font: 16px system-ui, sans-serif; }
+    body { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    fieldset { border: 1px solid #888; border-radius: .4rem; margin: 1rem 0; padding: 1rem; }
+    .settings { display: flex; flex-wrap: wrap; gap: 1rem; }
+    label { display: grid; gap: .4rem; }
+    input, button { font: inherit; padding: .5rem; }
+    input[type=number] { width: 7rem; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; }
+    progress { width: 100%; margin-top: 1rem; }
+    #status { white-space: pre-wrap; }
+    #results { display: flex; flex-wrap: wrap; gap: 1rem; }
+    #results img { max-width: 100%; max-height: 700px; display: block; }
+    #results figure { margin: 0; max-width: 450px; }
+    .note { opacity: .8; }
+  </style>
+  <script src="/try-on.js" defer></script>
+</head>
+<body>
+  <h1>Local FASHN try-on</h1>
+  <p>Files are sent only to this server; no external services are used.</p>
+  <p class="note">Raw photos require operator-enabled native preparation.
+    Worn-garment and masked-person modes require an authorized non-commercial research/evaluation parser.</p>
+  <form id="form">
+    <fieldset id="controls" disabled>
+      <legend>Try-on inputs and sampling</legend>
+      <label>Input mode
+        <select id="input-mode">
+          <option value="prepared">Prepared manifest and four PNGs</option>
+          <option id="raw-option" value="raw" disabled>Raw RGB PNG photos</option>
+        </select>
+      </label>
+      <fieldset id="prepared-controls">
+      <legend>Prepared inputs</legend>
+      <label>Select the manifest JSON and its four PNG files together
+        <input id="files" type="file" accept=".json,.png" multiple required>
+      </label>
+      </fieldset>
+      <fieldset id="raw-controls" hidden disabled>
+        <legend>Raw photos</legend>
+        <div class="settings">
+          <label>Person RGB PNG <input id="raw-person" type="file" accept=".png" required></label>
+          <label>Garment RGB PNG <input id="raw-garment" type="file" accept=".png" required></label>
+          <label>Category <select id="category">
+            <option value="tops">Tops</option><option value="bottoms">Bottoms</option><option value="one-pieces">One-pieces</option>
+          </select></label>
+          <label>Garment photo <select id="photo-type">
+            <option value="flat-lay">Flat lay</option><option id="photo-model" value="model" disabled>Worn by a model (research/evaluation)</option>
+          </select></label>
+          <label>Mask person's existing clothes (research/evaluation)
+            <input id="mask-person" type="checkbox" disabled>
+          </label>
+        </div>
+        <p class="note">8-bit RGB PNG only, at most 2.25 MiB per file, 4096 pixels per dimension and 4,194,304 pixels total.
+          No automatic rotation or browser resizing. Raw pixels are prepared in server memory, not written to disk.</p>
+      </fieldset>
+      <p id="input-info">No prepared inputs loaded.</p>
+      <div class="settings">
+        <label>Steps <input id="steps" type="number" min="1" max="1000" value="20" required></label>
+        <label>CFG <input id="cfg" type="number" min="0" step="any" value="1.5" required></label>
+        <label>Shift <input id="shift" type="number" min="-20" max="20" step="any" value="1.5" required></label>
+        <label>Skip final CFG steps <input id="skip" type="number" min="0" max="20" value="1" required></label>
+        <label>Samples <input id="samples" type="number" min="1" max="4" value="1" required></label>
+        <label>Seed (uint64) <input id="seed" type="text" inputmode="numeric" pattern="[0-9]+" value="42" required></label>
+      </div>
+      <p class="note">CPU generation can take tens of minutes. Cancellation waits for the current preparation stage or sampling forward.</p>
+      <button id="generate" type="submit">Generate</button>
+    </fieldset>
+  </form>
+  <button id="cancel" type="button" disabled>Cancel job</button>
+  <button id="resume" type="button" disabled>Retry job status</button>
+  <progress id="progress" value="0" max="1" aria-label="Completed sampling steps"></progress>
+  <p id="status" role="status" aria-live="polite">Connecting to the server...</p>
+  <section id="results" aria-label="Generated images"></section>
+</body>
+</html>

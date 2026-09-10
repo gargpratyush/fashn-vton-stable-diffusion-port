@@ -33,6 +33,32 @@ If you want to use a different host or port, pass:
 --listen-ip <ip> --listen-port <port>
 ```
 
+# FASHN Try-on
+
+From the repository root, start experimental FASHN try-on without text encoders or a VAE:
+
+```powershell
+.\build\bin\Release\sd-server.exe --diffusion-model model.safetensors --rng cpu --type bf16 --diffusion-fa -t 8 --listen-ip 127.0.0.1
+```
+
+Use `POST /sdcpp/v1/try_on` with embedded prepared PNGs or configured `raw_inputs`. Sampling controls belong
+in request JSON, not generic generation CLI defaults. See
+[the API contract](api.md#fashn-prepared-input-try-on) and
+[preparation instructions](../../docs/fashn_vton.md#native-raw-image-preparation).
+Open `/try-on` on the server for a standalone prepared-input upload UI with
+progress, cancellation and downloads. This page is embedded without a pnpm
+build and does not modify the frontend submodule. With `SD_FASHN_PREPROCESS=ON`,
+add `--try-on-dwpose-dir weights\dwpose` to enable in-memory raw HTTP/UI uploads.
+Worn-garment and person-masking modes additionally require
+`--try-on-parser-dir weights\human-parser-onnx-eval --accept-parser-research-license`
+and remain restricted to authorized non-commercial research/evaluation.
+The optional `sd-fashn-prepare` tool uses the same native pipeline.
+See the [raw input contract](api.md#fashn-raw-image-try-on-opt-in).
+`--type bf16` reduces
+resident matrix memory while computation remains F32. Active cancellation is
+cooperative and can wait for a full model forward. Keep the example server on
+a trusted local interface; this does not add authentication.
+
 # Frontend
 
 ## Build with Frontend

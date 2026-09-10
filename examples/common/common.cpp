@@ -35,6 +35,7 @@ const char* const modes_str[] = {
     "convert",
     "upscale",
     "metadata",
+    "try_on",
 };
 
 static sd_vae_format_t str_to_vae_format(const std::string& value) {
@@ -1760,20 +1761,64 @@ bool decode_base64_image(const std::string& encoded_input,
                          int target_channels,
                          int expected_width,
                          int expected_height,
-                         SDImageOwner& out_image) {
+                         SDImageOwner& out_image,
+                         bool strict_prepared_png,
+                         uint64_t max_pixels) {
+    if (strict_prepared_png && encoded_input.size() > SD_PREPARED_IMAGE_MAX_ENCODED_SIZE) {
+        LOG_ERROR("Prepared PNG exceeds the encoded image size limit");
+        return false;
+    }
     std::string encoded = encoded_input;
     auto comma_pos      = encoded.find(',');
     if (comma_pos != std::string::npos) {
+        if (strict_prepared_png && encoded.substr(0, comma_pos) != "data:image/png;base64") {
+            LOG_ERROR("Prepared image data URI must declare image/png;base64");
+            return false;
+        }
         encoded = encoded.substr(comma_pos + 1);
+    }
+    if (strict_prepared_png) {
+        size_t padding = encoded.find('=');
+        if (padding == std::string::npos) {
+            padding = encoded.size();
+        }
+        bool valid = !encoded.empty() && encoded.size() % 4 == 0 && encoded.size() - padding <= 2;
+        for (size_t i = 0; valid && i < encoded.size(); ++i) {
+            char c = encoded[i];
+            valid  = i >= padding ? c == '=' : ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/');
+        }
+        if (!valid) {
+            LOG_ERROR("Prepared PNG must use valid padded base64");
+            return false;
+        }
     }
 
     std::vector<uint8_t> image_bytes = decode_base64_bytes(encoded);
     if (image_bytes.empty()) {
+        if (strict_prepared_png) {
+            LOG_ERROR("Prepared PNG decoded to empty bytes");
+        }
         return false;
     }
 
     int decoded_width  = 0;
     int decoded_height = 0;
+    if (strict_prepared_png) {
+        const uint8_t signature[] = {137, 80, 78, 71, 13, 10, 26, 10};
+        int channels              = 0;
+        if (image_bytes.size() < sizeof(signature) ||
+            !std::equal(std::begin(signature), std::end(signature), image_bytes.begin()) ||
+            !get_u8_image_info_from_memory(image_bytes.data(), static_cast<int>(image_bytes.size()),
+                                           decoded_width, decoded_height, channels) ||
+            channels != target_channels ||
+            (max_pixels == 0 ? (decoded_width != expected_width || decoded_height != expected_height) :
+             (expected_width != 0 || expected_height != 0 || decoded_width <= 0 || decoded_height <= 0 ||
+              decoded_width > SD_RAW_IMAGE_MAX_DIMENSION || decoded_height > SD_RAW_IMAGE_MAX_DIMENSION ||
+              uint64_t(decoded_width) * uint64_t(decoded_height) > max_pixels))) {
+            LOG_ERROR("Prepared image must be an 8-bit PNG with exact canvas dimensions and channels");
+            return false;
+        }
+    }
     uint8_t* raw_data  = load_image_from_memory(reinterpret_cast<const char*>(image_bytes.data()),
                                                 static_cast<int>(image_bytes.size()),
                                                 decoded_width,

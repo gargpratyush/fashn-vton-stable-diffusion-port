@@ -1,0 +1,37 @@
+import ctypes
+import json
+import os
+import time
+from ctypes import wintypes
+
+
+class Counters(ctypes.Structure):
+    _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
+        (name, ctypes.c_size_t) for name in
+        ("PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage", "QuotaPagedPoolUsage",
+         "QuotaPeakNonPagedPoolUsage", "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage", "PrivateUsage")]
+
+
+psapi = ctypes.WinDLL("psapi", use_last_error=True)
+psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+psapi.GetProcessMemoryInfo.restype = wintypes.BOOL
+
+
+def memory():
+    counters = Counters()
+    counters.cb = ctypes.sizeof(counters)
+    if not psapi.GetProcessMemoryInfo(wintypes.HANDLE(-1), ctypes.byref(counters), counters.cb):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return {"working_set_bytes": counters.WorkingSetSize, "private_commit_bytes": counters.PrivateUsage}
+
+
+before = memory()
+library = ctypes.CDLL(r"C:\source\fashn-native-deps\openblas-0.3.34\package\bin\libopenblas.dll")
+library.openblas_get_num_threads.restype = ctypes.c_int
+time.sleep(.25)
+after = memory()
+print(json.dumps({"requested_threads": int(os.environ["OPENBLAS_NUM_THREADS"]),
+                  "actual_threads": library.openblas_get_num_threads(),
+                  "before": before, "after": after,
+                  "private_delta_bytes": after["private_commit_bytes"] - before["private_commit_bytes"],
+                  "scope": "Fresh interpreter; only the official OpenBLAS DLL is loaded, no NumPy, GGML or model."}))

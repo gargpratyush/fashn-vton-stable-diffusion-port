@@ -1,0 +1,220 @@
+[
+  {
+    "id": "cardigan-blas-floating",
+    "title": "Cardigan: blas-floating",
+    "person": "local-experiment\\quality-fixtures\\model_5.png",
+    "garment": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+    "native": "local-experiment\\checkpoint38-integrated\\cardigan-floating-blas\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "BF16 storage / BLAS F32",
+    "reference_label": "BF16 storage / CPU F32",
+    "scope": "Same 20 steps, CFG1.5, shift1.5, skip1, seed42 and crop. Full native floating trajectory agreement is recorded separately.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  },
+  {
+    "id": "cardigan-blas-upstream",
+    "title": "Cardigan: blas-upstream",
+    "person": "local-experiment\\quality-fixtures\\model_5.png",
+    "garment": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+    "native": "local-experiment\\checkpoint38-integrated\\cardigan-floating-blas\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint27-upstream-cardigan\\sample-0.png",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Optimized BLAS F32",
+    "reference_label": "Original upstream sampler",
+    "scope": "Original unmodified Python sampler, default attention/batched CFG, versus optimized native BLAS. These are final pixels, not a Python intermediate-trajectory comparison."
+  },
+  {
+    "id": "cardigan-q8-floating",
+    "title": "Cardigan: q8-floating",
+    "person": "local-experiment\\quality-fixtures\\model_5.png",
+    "garment": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+    "native": "local-experiment\\checkpoint38-integrated\\cardigan-q8\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Optimized Q8",
+    "reference_label": "Native floating CPU",
+    "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  },
+  {
+    "id": "cardigan-mixed-floating",
+    "title": "Cardigan: mixed-floating",
+    "person": "local-experiment\\quality-fixtures\\model_5.png",
+    "garment": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+    "native": "local-experiment\\checkpoint38-integrated\\cardigan-mixed\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Optimized mixed 100Q8/4F32",
+    "reference_label": "Native floating CPU",
+    "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  },
+  {
+    "id": "cardigan-mixed-q8",
+    "title": "Cardigan: mixed-q8",
+    "person": "local-experiment\\quality-fixtures\\model_5.png",
+    "garment": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+    "native": "local-experiment\\checkpoint38-integrated\\cardigan-mixed\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint38-integrated\\cardigan-q8\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Mixed 100Q8 / 4F32",
+    "reference_label": "All 104 eligible matrices Q8",
+    "scope": "The four original-value F32 restorations remain frozen from the prior bottoms study. No new tuning; remaining boundary errors are not eliminated.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  },
+  {
+    "id": "bottoms-blas-floating",
+    "title": "Bottoms: blas-floating",
+    "person": "local-experiment\\quality-fixtures\\model_8.png",
+    "garment": "local-experiment\\source\\examples\\data\\model.webp",
+    "native": "local-experiment\\checkpoint35-full-acceptance\\bottoms\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint34-full-acceptance\\full-trajectory\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "BF16 storage / BLAS F32",
+    "reference_label": "BF16 storage / CPU F32",
+    "scope": "Same 20 steps, CFG1.5, shift1.5, skip1, seed42 and crop. Full native floating trajectory agreement is recorded separately.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  },
+  {
+    "id": "bottoms-blas-upstream",
+    "title": "Bottoms: blas-upstream",
+    "person": "local-experiment\\quality-fixtures\\model_8.png",
+    "garment": "local-experiment\\source\\examples\\data\\model.webp",
+    "native": "local-experiment\\checkpoint35-full-acceptance\\bottoms\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint27-upstream-bottoms\\sample-0.png",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Optimized BLAS F32",
+    "reference_label": "Original upstream sampler",
+    "scope": "Original unmodified Python sampler, default attention/batched CFG, versus optimized native BLAS. These are final pixels, not a Python intermediate-trajectory comparison."
+  },
+  {
+    "id": "bottoms-q8-floating",
+    "title": "Bottoms: q8-floating",
+    "person": "local-experiment\\quality-fixtures\\model_8.png",
+    "garment": "local-experiment\\source\\examples\\data\\model.webp",
+    "native": "local-experiment\\checkpoint38-integrated\\bottoms-q8\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint34-full-acceptance\\full-trajectory\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Optimized Q8",
+    "reference_label": "Native floating CPU",
+    "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  },
+  {
+    "id": "bottoms-mixed-floating",
+    "title": "Bottoms: mixed-floating",
+    "person": "local-experiment\\quality-fixtures\\model_8.png",
+    "garment": "local-experiment\\source\\examples\\data\\model.webp",
+    "native": "local-experiment\\checkpoint38-integrated\\bottoms-mixed\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint34-full-acceptance\\full-trajectory\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Optimized mixed 100Q8/4F32",
+    "reference_label": "Native floating CPU",
+    "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  },
+  {
+    "id": "bottoms-mixed-q8",
+    "title": "Bottoms: mixed-q8",
+    "person": "local-experiment\\quality-fixtures\\model_8.png",
+    "garment": "local-experiment\\source\\examples\\data\\model.webp",
+    "native": "local-experiment\\checkpoint38-integrated\\bottoms-mixed\\step-19.safetensors",
+    "reference": "local-experiment\\checkpoint38-integrated\\bottoms-q8\\step-19.safetensors",
+    "native_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    },
+    "native_label": "Mixed 100Q8 / 4F32",
+    "reference_label": "All 104 eligible matrices Q8",
+    "scope": "The four original-value F32 restorations remain frozen from the prior bottoms study. No new tuning; remaining boundary errors are not eliminated.",
+    "reference_crop": {
+      "x": 0,
+      "y": 48,
+      "width": 576,
+      "height": 768
+    }
+  }
+]

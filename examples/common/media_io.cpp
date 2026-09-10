@@ -783,6 +783,15 @@ uint8_t* load_image_from_file(const char* image_path,
     return load_image_common(false, image_path, 0, width, height, expected_width, expected_height, expected_channel);
 }
 
+bool get_u8_image_info_from_file(const char* path, int& width, int& height, int& channels) {
+    return !stbi_is_hdr(path) && !stbi_is_16_bit(path) && stbi_info(path, &width, &height, &channels) != 0;
+}
+
+bool get_u8_image_info_from_memory(const uint8_t* bytes, int size, int& width, int& height, int& channels) {
+    return !stbi_is_hdr_from_memory(bytes, size) && !stbi_is_16_bit_from_memory(bytes, size) &&
+           stbi_info_from_memory(bytes, size, &width, &height, &channels) != 0;
+}
+
 bool load_sd_image_from_file(sd_image_t* image,
                              const char* image_path,
                              int expected_width,

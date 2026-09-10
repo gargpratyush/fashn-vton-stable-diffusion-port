@@ -1,0 +1,60 @@
+{
+  "raw_invalid_cases": 14,
+  "raw_exact_prepared_pixel_match": true,
+  "raw_preparation_cancellation": true,
+  "soak": {
+    "samples": [
+      {
+        "round": 0,
+        "private_bytes": 3172818944,
+        "known_retained_base64_bytes": 1641744,
+        "adjusted_private_bytes": 3171177200
+      },
+      {
+        "round": 1,
+        "private_bytes": 3174588416,
+        "known_retained_base64_bytes": 3283488,
+        "adjusted_private_bytes": 3171304928
+      },
+      {
+        "round": 2,
+        "private_bytes": 3175239680,
+        "known_retained_base64_bytes": 4925232,
+        "adjusted_private_bytes": 3170314448
+      },
+      {
+        "round": 3,
+        "private_bytes": 3179429888,
+        "known_retained_base64_bytes": 8231352,
+        "adjusted_private_bytes": 3171198536
+      }
+    ],
+    "post_warmup_span_bytes": 884088,
+    "state": "measured",
+    "budget_bytes": 134217728,
+    "note": "Two warmup requests excluded; approximate known result storage subtracted. A short bounded-growth check, not proof of no leaks."
+  },
+  "two_sample_batch": {
+    "first_matches_single_sample": true,
+    "distinct_second_sample": true
+  },
+  "concurrent_clients": {
+    "workers": 8,
+    "unique_cancelled_jobs": 16,
+    "post_cancel_private_bytes": 3173183488
+  },
+  "image_memory_budget": {
+    "limit": 536870912,
+    "queued_before_rejection": 24,
+    "peak_reserved": 516912790,
+    "final_reserved": 10532502,
+    "released_and_readmitted": true
+  },
+  "graceful_shutdown_seconds": 74.67199999996228,
+  "passed": true,
+  "tests_run": 7,
+  "skipped": 0,
+  "attention": "flash",
+  "weight_type": "bf16",
+  "ort_no_arena": true
+}

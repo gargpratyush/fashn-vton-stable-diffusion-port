@@ -4,6 +4,7 @@ add_executable(${TARGET}
     ../common/common.cpp
     ../common/log.cpp
     ../common/media_io.cpp
+    ../common/try_on.cpp
     image_metadata.cpp
     main.cpp
 )

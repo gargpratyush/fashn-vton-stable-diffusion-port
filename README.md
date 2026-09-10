@@ -1,3 +1,28 @@
+# FASHN VTON 1.5 native port
+
+This repository extends [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp)
+with native FASHN VTON 1.5 virtual try-on: a dedicated transformer, exact
+sampler, prepared-input C API/CLI, optional native pose/parser preparation,
+and a local asynchronous server with a standalone `/try-on` interface.
+
+**Start here:** [build and run](docs/fashn_quickstart.md) |
+[complete API and developer guide](docs/fashn_vton.md) |
+[project history and experimental reports](reports/README.md).
+
+The validated deployment path is **floating CPU inference**. BF16/F16
+matrix storage with F32 computation is supported. Q8/mixed precision and
+OpenBLAS are diagnostic experiments, not public inference support; GPU
+validation remains blocked by the evaluation machine's hardware.
+Model weights, SDK binaries, virtual environments and large trajectory
+tensors are **not included**. Initialize the pinned Git submodules when cloning.
+Report images have separate attribution/licensing requirements; see
+[report notices](reports/NOTICE.md).
+
+The original upstream documentation follows. Its generic model/backend
+capabilities must not be interpreted as FASHN-specific validation.
+
+---
+
 <p align="center">
   <img src="./assets/logo.png" width="360x">
 </p>

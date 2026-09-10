@@ -1,0 +1,53 @@
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+from safetensors.numpy import load_file
+
+ROOT = Path(r"C:\source\fashn-vton-reference")
+REPO = Path(r"C:\source\stable-diffusion.cpp")
+sys.path.insert(0, str(REPO / "scripts"))
+from benchmark_fashn_vton import measure_command
+from compare_fashn_trajectories import metrics
+from export_fashn_vton_reference import sha256
+
+exe = REPO / r"build\cpu-blas\bin\Release\test-fashn-vton-trajectory.exe"
+model = ROOT / r"checkpoint32-runtime-weights\bf16\model.gguf"
+conditions = ROOT / r"checkpoint22-quality-reference-preparation\worn-bottoms-free\conditions.safetensors"
+output = ROOT / "checkpoint35-forward-controls"
+output.mkdir(exist_ok=False)
+sources = [exe, model, conditions,
+           Path(r"C:\source\fashn-native-deps\openblas-0.3.34\package\bin\libopenblas.dll")]
+report = {"passed": False, "provenance": {str(p): sha256(p) for p in sources}, "runs": {}}
+baseline = None
+for label, backend in [("a1-cpu", "CPU"), ("b1-blas", "BLAS"), ("b2-blas", "BLAS"), ("a2-cpu", "CPU")]:
+    directory = output / label
+    command = [str(exe), str(model), str(conditions), str(directory), "20", "1.5", "1.5", "1", "42", "2", "16",
+               "--backend", backend, "--matrix-type", "bf16", "--upcast-matrices", "--mmap", "off",
+               "--load-threads", "2", "--probe-forwards", "3", "--no-record", "--memory-profile",
+               "--precompute-modulations", "--fused-gelu"]
+    measured = measure_command(command, output / (label + ".log"), 1800, output / (label + "-timeline.jsonl"))
+    report["runs"][label] = {"measurement": measured}
+    (output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if measured["exit_code"] != 0:
+        raise RuntimeError(f"{label} execution failed")
+    manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    actual = load_file(str(directory / "probe.safetensors"))["velocity"]
+    if baseline is None:
+        baseline = actual
+    comparison = metrics(baseline, actual)
+    comparison["bitwise_equal"] = bool(np.array_equal(baseline, actual))
+    report["runs"][label].update(manifest=manifest, comparison=comparison)
+    (output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(label, manifest["probe_forward_seconds"], comparison, flush=True)
+    if not comparison["passed"] or (backend == "CPU" and not comparison["bitwise_equal"]):
+        raise RuntimeError(f"{label} numerical gate failed")
+report["warm_medians"] = {
+    backend: float(np.median([t for label, row in report["runs"].items() if label.endswith(backend)
+                             for t in row["manifest"]["probe_forward_seconds"][1:]]))
+    for backend in ("cpu", "blas")
+}
+report["passed"] = True
+(output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+print(json.dumps(report["warm_medians"]), flush=True)

@@ -1,0 +1,5 @@
+#ifndef __SD_SERVER_TRY_ON_ASSETS_H__
+#define __SD_SERVER_TRY_ON_ASSETS_H__
+static const char try_on_html[] = R"FASHNHTML(@FASHN_TRY_ON_HTML@)FASHNHTML";
+static const char try_on_js[] = R"FASHNJS(@FASHN_TRY_ON_JS@)FASHNJS";
+#endif

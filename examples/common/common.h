@@ -16,7 +16,7 @@
 #define BOOL_STR(b) ((b) ? "true" : "false")
 
 extern const char* const modes_str[];
-#define SD_ALL_MODES_STR "img_gen, adetailer, vid_gen, convert, upscale, metadata"
+#define SD_ALL_MODES_STR "img_gen, adetailer, vid_gen, convert, upscale, metadata, try_on"
 
 enum SDMode {
     IMG_GEN,
@@ -25,6 +25,7 @@ enum SDMode {
     CONVERT,
     UPSCALE,
     METADATA,
+    TRY_ON,
     MODE_COUNT
 };
 
@@ -113,7 +114,13 @@ bool decode_base64_image(const std::string& encoded_input,
                          int target_channels,
                          int expected_width,
                          int expected_height,
-                         SDImageOwner& out_image);
+                         SDImageOwner& out_image,
+                         bool strict_prepared_png = false,
+                         uint64_t max_pixels = 0);
+
+constexpr size_t SD_PREPARED_IMAGE_MAX_ENCODED_SIZE = 3 * 1024 * 1024;
+constexpr uint64_t SD_RAW_IMAGE_MAX_PIXELS = 4 * 1024 * 1024;
+constexpr int SD_RAW_IMAGE_MAX_DIMENSION = 4096;
 
 struct SDContextParams {
     int n_threads = -1;

@@ -158,6 +158,14 @@ private:
 public:
     ~ModelManager() override;
 
+    struct ParamsMemorySnapshot {
+        size_t registered_bytes = 0;
+        size_t assigned_bytes = 0;
+        size_t allocated_buffer_bytes = 0;
+        size_t directly_mapped_bytes = 0;
+    };
+    ParamsMemorySnapshot params_memory_snapshot() const;
+
     ModelLoader& loader() { return model_loader_; }
     const ModelLoader& loader() const { return model_loader_; }
 

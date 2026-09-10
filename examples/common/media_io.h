@@ -45,6 +45,9 @@ bool load_sd_image_from_file(sd_image_t* image,
                              int expected_height  = 0,
                              int expected_channel = 3);
 
+bool get_u8_image_info_from_file(const char* path, int& width, int& height, int& channels);
+bool get_u8_image_info_from_memory(const uint8_t* bytes, int size, int& width, int& height, int& channels);
+
 uint8_t* load_image_from_memory(const char* image_bytes,
                                 int len,
                                 int& width,

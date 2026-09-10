@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "core/util.h"
+#include "model/diffusion/fashn_vton.h"
 #include "model_io/gguf_io.h"
 #include "model_io/safetensors_io.h"
 #include "model_io/streaming_writer.h"
@@ -32,7 +33,8 @@ struct TensorExportJob {
 static ggml_type get_export_tensor_type(ModelLoader& model_loader,
                                         const TensorStorage& tensor_storage,
                                         ggml_type type,
-                                        const TensorTypeRules& tensor_type_rules) {
+                                        const TensorTypeRules& tensor_type_rules,
+                                        bool fashn) {
     const std::string& name = tensor_storage.name;
     ggml_type tensor_type   = tensor_storage.type;
     ggml_type dst_type      = type;
@@ -45,6 +47,13 @@ static ggml_type get_export_tensor_type(ModelLoader& model_loader,
         }
     }
 
+    if (fashn) {
+        if (dst_type == GGML_TYPE_COUNT) return tensor_type;
+        if (dst_type == GGML_TYPE_F32 || dst_type == GGML_TYPE_F16 || dst_type == GGML_TYPE_BF16) return dst_type;
+        if (dst_type == GGML_TYPE_Q8_0)
+            return FashnVTONConfig::is_quantizable_matrix(name, tensor_storage) ? GGML_TYPE_Q8_0 : GGML_TYPE_F32;
+        return GGML_TYPE_COUNT;
+    }
     if (model_loader.tensor_should_be_converted(tensor_storage, dst_type)) {
         tensor_type = dst_type;
     }
@@ -57,12 +66,18 @@ static bool collect_tensors_for_export(ModelLoader& model_loader,
                                        const TensorTypeRules& tensor_type_rules,
                                        std::vector<TensorExportInfo>& tensors) {
     tensors.clear();
+    const bool fashn = FashnVTONConfig::is_candidate(model_loader.get_tensor_storage_map());
+    if (fashn && model_loader.get_sd_version() != VERSION_FASHN_VTON_1_5) return false;
     tensors.reserve(model_loader.get_tensor_storage_map().size());
     for (const auto& kv : model_loader.get_tensor_storage_map()) {
         const TensorStorage& tensor_storage = kv.second;
         TensorExportInfo info;
         info.storage = tensor_storage;
-        info.type    = get_export_tensor_type(model_loader, tensor_storage, type, tensor_type_rules);
+        info.type    = get_export_tensor_type(model_loader, tensor_storage, type, tensor_type_rules, fashn);
+        if (info.type == GGML_TYPE_COUNT) {
+            LOG_ERROR("FASHN export supports F32/F16/BF16 and selective Q8_0 only; lower-bit conversion awaits quality validation");
+            return false;
+        }
         tensors.push_back(std::move(info));
     }
     LOG_INFO("collected %zu tensors for export", tensors.size());
@@ -379,8 +394,8 @@ bool convert_with_components(const char* model_path,
         return false;
     }
 
-    if (convert_name) {
-        model_loader.convert_tensors_name();
+    if (convert_name && !model_loader.convert_tensors_name()) {
+        return false;
     }
 
     return export_loaded_model(model_loader, output_path, output_type, tensor_type_rules, n_threads);

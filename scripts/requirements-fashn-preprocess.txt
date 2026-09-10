@@ -1,0 +1,3 @@
+# Optional Python input preparation; no parser or GPU packages.
+-r requirements-fashn-preprocess-base.txt
+opencv-python-headless==4.12.0.88

@@ -356,6 +356,26 @@ bool ModelManager::validate_registered_tensors() {
     return ok;
 }
 
+ModelManager::ParamsMemorySnapshot ModelManager::params_memory_snapshot() const {
+    ParamsMemorySnapshot result;
+    for (const auto& state : tensor_states_) {
+        if (state->tensor != nullptr) {
+            result.registered_bytes += ggml_nbytes(state->tensor);
+            if (state->tensor->data != nullptr)
+                result.assigned_bytes += ggml_nbytes(state->tensor);
+        }
+    }
+    for (const auto& block : params_storage_blocks_) {
+        if (block->buffer != nullptr)
+            result.allocated_buffer_bytes += ggml_backend_buffer_get_size(block->buffer);
+        if (!block->mmap_tensor_stores.empty()) {
+            for (const auto* state : block->states)
+                result.directly_mapped_bytes += ggml_nbytes(state->tensor);
+        }
+    }
+    return result;
+}
+
 bool ModelManager::load_tensors_to_params_backend(const std::vector<TensorState*>& states) {
     std::vector<TensorState*> need_load;
     need_load.reserve(states.size());
@@ -396,8 +416,9 @@ bool ModelManager::load_tensors_to_params_backend(const std::vector<TensorState*
         }
     }
 
-    if (!alloc_params_buffers(need_alloc, created_storage_blocks) ||
-        !load_tensors(need_load)) {
+    const bool allocated = alloc_params_buffers(need_alloc, created_storage_blocks);
+    model_loader_.diagnostic_event("parameter_destinations_allocated");
+    if (!allocated || !load_tensors(need_load)) {
         for (ParamsStorageBlock* block : created_storage_blocks) {
             if (block != nullptr) {
                 free_params_storage_block(*block);

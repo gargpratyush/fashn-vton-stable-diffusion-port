@@ -8,6 +8,7 @@
 #include "core/ggml_tensor_utils.h"
 
 #include "core/util.h"
+#include "core/strict_gelu.h"
 #include "model/adapter/pulid.hpp"
 #include "model/common/rope.hpp"
 #include "model/diffusion/dit.hpp"
@@ -18,6 +19,20 @@
 #define FLUX_GRAPH_SIZE 10240
 
 namespace Flux {
+    inline ggml_tensor* gelu(GGMLRunnerContext* ctx, ggml_tensor* x) {
+        if (!ctx->full_precision_gelu) {
+            return ggml_ext_gelu(ctx->ggml_ctx, x, true);
+        }
+        if (ctx->fused_full_precision_gelu)
+            return sd_strict_gelu(ctx->ggml_ctx, x);
+        // Avoid the CPU GELU op's FP16 lookup table for strict F32 model parity.
+        auto c = ctx->ggml_ctx;
+        auto cubic = ggml_mul(c, ggml_sqr(c, x), x);
+        auto inner = ggml_scale(c, ggml_add(c, x, ggml_scale(c, cubic, 0.044715f)), 0.7978845608028654f);
+        auto gate = ggml_scale_bias(c, ggml_tanh(c, inner), 0.5f, 0.5f);
+        return ggml_mul(c, x, gate);
+    }
+
 
     struct ChromaRadianceConfig {
         int64_t nerf_hidden_size = 64;
@@ -336,7 +351,7 @@ namespace Flux {
             if (use_mlp_silu_act) {
                 x = ggml_ext_silu_act(ctx->ggml_ctx, x);
             } else {
-                x = ggml_ext_gelu(ctx->ggml_ctx, x, true);
+                x = gelu(ctx, x);
             }
             x = mlp_2->forward(ctx, x);
             return x;
@@ -393,14 +408,16 @@ namespace Flux {
             blocks["lin"] = std::shared_ptr<GGMLBlock>(new Linear(dim, dim * multiplier, bias));
         }
 
+        ggml_tensor* project(GGMLRunnerContext* ctx, ggml_tensor* vec) {
+            auto lin = std::dynamic_pointer_cast<Linear>(blocks["lin"]);
+            auto out = ggml_silu(ctx->ggml_ctx, vec);
+            return lin->forward(ctx, out);
+        }
+
         std::vector<ModulationOut> forward(GGMLRunnerContext* ctx, ggml_tensor* vec) {
             // x: [N, dim]
             // return: [ModulationOut, ModulationOut]
-            auto lin = std::dynamic_pointer_cast<Linear>(blocks["lin"]);
-
-            auto out = ggml_silu(ctx->ggml_ctx, vec);
-            out      = lin->forward(ctx, out);  // [N, multiplier*dim]
-
+            auto out = project(ctx, vec);
             auto m = ggml_reshape_3d(ctx->ggml_ctx, out, vec->ne[0], multiplier, vec->ne[1]);  // [N, multiplier, dim]
             m      = ggml_cont(ctx->ggml_ctx, ggml_permute(ctx->ggml_ctx, m, 0, 2, 1, 3));     // [multiplier, N, dim]
 
@@ -592,6 +609,10 @@ namespace Flux {
 
             return {img, txt};
         }
+
+        ggml_tensor* project_modulation(GGMLRunnerContext* ctx, ggml_tensor* vec, bool image) {
+            return std::static_pointer_cast<Modulation>(blocks.at(image ? "img_mod" : "txt_mod"))->project(ctx, vec);
+        }
     };
 
     struct SingleStreamBlock : public GGMLBlock {
@@ -640,6 +661,10 @@ namespace Flux {
         ModulationOut get_distil_mod(GGMLRunnerContext* ctx, ggml_tensor* vec) {
             int64_t offset = 3 * idx;
             return ModulationOut(ctx, vec, offset);
+        }
+
+        ggml_tensor* project_modulation(GGMLRunnerContext* ctx, ggml_tensor* vec) {
+            return std::static_pointer_cast<Modulation>(blocks.at("modulation"))->project(ctx, vec);
         }
 
         ggml_tensor* forward(GGMLRunnerContext* ctx,
@@ -692,7 +717,7 @@ namespace Flux {
             } else if (use_mlp_silu_act) {
                 mlp = ggml_ext_silu_act(ctx->ggml_ctx, mlp);
             } else {
-                mlp = ggml_ext_gelu(ctx->ggml_ctx, mlp, true);
+                mlp = gelu(ctx, mlp);
             }
             auto attn_mlp = ggml_concat(ctx->ggml_ctx, attn, mlp, 0);  // [N, n_token, hidden_size + mlp_hidden_dim]
             auto output   = linear2->forward(ctx, attn_mlp);           // [N, n_token, hidden_size]
@@ -732,21 +757,24 @@ namespace Flux {
 
         ggml_tensor* forward(GGMLRunnerContext* ctx,
                              ggml_tensor* x,
-                             ggml_tensor* c) {
+                             ggml_tensor* c,
+                             ggml_tensor* supplied_modulation = nullptr) {
             // x: [N, n_token, hidden_size]
             // c: [N, hidden_size]
             // return: [N, n_token, patch_size * patch_size * out_channels]
             auto norm_final = std::dynamic_pointer_cast<LayerNorm>(blocks["norm_final"]);
             auto linear     = std::dynamic_pointer_cast<Linear>(blocks["linear"]);
             ggml_tensor *shift, *scale;
-            if (prune_mod) {
+            if (supplied_modulation != nullptr) {
+                auto m_vec = ggml_ext_chunk(ctx->ggml_ctx, supplied_modulation, 2, 0);
+                shift = m_vec[0];
+                scale = m_vec[1];
+            } else if (prune_mod) {
                 auto mod = get_distil_mod(ctx, c);
                 shift    = mod.shift;
                 scale    = mod.scale;
             } else {
-                auto adaLN_modulation_1 = std::dynamic_pointer_cast<Linear>(blocks["adaLN_modulation.1"]);
-
-                auto m     = adaLN_modulation_1->forward(ctx, ggml_silu(ctx->ggml_ctx, c));  // [N, 2 * hidden_size]
+                auto m     = project_modulation(ctx, c);  // [N, 2 * hidden_size]
                 auto m_vec = ggml_ext_chunk(ctx->ggml_ctx, m, 2, 0);
                 shift      = m_vec[0];
                 scale      = m_vec[1];
@@ -756,6 +784,10 @@ namespace Flux {
             x = linear->forward(ctx, x);
 
             return x;
+        }
+
+        ggml_tensor* project_modulation(GGMLRunnerContext* ctx, ggml_tensor* c) {
+            return std::static_pointer_cast<Linear>(blocks.at("adaLN_modulation.1"))->forward(ctx, ggml_silu(ctx->ggml_ctx, c));
         }
     };
 

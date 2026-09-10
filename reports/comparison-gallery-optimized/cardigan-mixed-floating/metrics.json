@@ -1,0 +1,42 @@
+{
+  "metrics": {
+    "changed_channels": 170921,
+    "total_channels": 1327104,
+    "changed_pixels": 118827,
+    "max_abs": 82.0,
+    "mae": 0.19067759572723766,
+    "rmse": 1.5153373609421787,
+    "psnr_db": 44.52061698907283
+  },
+  "sources": {
+    "person": {
+      "path": "local-experiment\\quality-fixtures\\model_5.png",
+      "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+    },
+    "garment": {
+      "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+      "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+    },
+    "native": {
+      "path": "local-experiment\\checkpoint38-integrated\\cardigan-mixed\\step-19.safetensors",
+      "sha256": "b2d94e3032a671286a455d745a10fe94c126c151ff2b97cb90f6da9a787b90b1",
+      "crop": {
+        "x": 0,
+        "y": 48,
+        "width": 576,
+        "height": 768
+      }
+    },
+    "reference": {
+      "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+      "sha256": "3aa69d62cbb797d319c1d4b180bf46888ac658a9d433c361f6f6d936fd374265",
+      "crop": {
+        "x": 0,
+        "y": 48,
+        "width": 576,
+        "height": 768
+      }
+    }
+  },
+  "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix."
+}

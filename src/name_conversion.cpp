@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include "core/util.h"
+#include "model/diffusion/fashn_vton.h"
 #include "name_conversion.h"
 
 void replace_with_name_map(std::string& name, const std::vector<std::pair<std::string, std::string>>& name_map) {
@@ -1345,6 +1346,9 @@ static std::string convert_ip_adapter_name(std::string name, SDVersion version) 
 }
 
 std::string convert_tensor_name(std::string name, SDVersion version) {
+    if (sd_version_is_fashn_vton(version)) {
+        return FashnVTONConfig::canonical_name(name);
+    }
     if (version == VERSION_ESRGAN) {
         return convert_esrgan_tensor_name(std::move(name));
     }

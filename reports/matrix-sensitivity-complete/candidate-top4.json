@@ -1,0 +1,8 @@
+{
+  "f32_matrices": [
+    "single_blocks.12.linear1.weight",
+    "single_blocks.11.linear1.weight",
+    "single_blocks.8.linear1.weight",
+    "single_blocks.14.linear1.weight"
+  ]
+}

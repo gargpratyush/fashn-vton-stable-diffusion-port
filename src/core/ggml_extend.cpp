@@ -535,7 +535,9 @@ ggml_tensor* ggml_ext_attention_ext(ggml_context* ctx,
                                     ggml_tensor* mask,
                                     bool skip_reshape,
                                     bool flash_attn,
-                                    float kv_scale) {  // avoid overflow
+                                    float kv_scale,
+                                    bool flash_attn_f32_kv,
+                                    ggml_backend_dev_t attention_fallback_device) {  // avoid overflow
     int64_t L_q;
     int64_t L_k;
     int64_t C;
@@ -576,14 +578,14 @@ ggml_tensor* ggml_ext_attention_ext(ggml_context* ctx,
         if (kv_scale != 1.0f) {
             k_in = ggml_ext_scale(ctx, k_in, kv_scale);
         }
-        k_in = ggml_cast(ctx, k_in, GGML_TYPE_F16);
+        k_in = ggml_cast(ctx, k_in, flash_attn_f32_kv ? GGML_TYPE_F32 : GGML_TYPE_F16);
 
         v_in = ggml_ext_cont(ctx, ggml_permute(ctx, v_in, 0, 2, 1, 3));
         v_in = ggml_reshape_3d(ctx, v_in, d_head, L_k, n_kv_head * N);
         if (kv_scale != 1.0f) {
             v_in = ggml_ext_scale(ctx, v_in, kv_scale);
         }
-        v_in = ggml_cast(ctx, v_in, GGML_TYPE_F16);
+        v_in = ggml_cast(ctx, v_in, flash_attn_f32_kv ? GGML_TYPE_F32 : GGML_TYPE_F16);
 
         if (mask_in != nullptr) {
             // ggml_flash_attn_ext expects the mask as a contiguous F16 tensor shaped
@@ -602,7 +604,8 @@ ggml_tensor* ggml_ext_attention_ext(ggml_context* ctx,
         }
 
         auto out = ggml_flash_attn_ext(ctx, q_in, k_in, v_in, mask_in, scale / kv_scale, 0, 0);
-        if (!ggml_backend_supports_op(backend, out)) {
+        if (!ggml_backend_supports_op(backend, out) &&
+            !(attention_fallback_device && ggml_backend_dev_supports_op(attention_fallback_device, out))) {
             return nullptr;
         }
         ggml_flash_attn_ext_set_prec(out, GGML_PREC_F32);

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cinttypes>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <set>
@@ -22,6 +23,8 @@
 #include "model_loader.h"
 #include "model_manager.h"
 #include "stable-diffusion.h"
+#include "model/diffusion/fashn_vton_model.h"
+#include "runtime/fashn_vton_sampling.h"
 
 #include "conditioning/conditioner.hpp"
 #include "core/backend_fit.h"
@@ -129,6 +132,7 @@ const char* model_version_to_str[] = {
     "Krea2",
     "Mage Flow",
     "ESRGAN",
+    "FASHN VTON 1.5",
 };
 
 const char* sampling_methods_str[] = {
@@ -255,6 +259,9 @@ public:
     bool disable_prefetch          = false;
     bool disable_segmented_compute = false;
     bool eager_load                = false;
+    bool fashn_modulation_cache_enabled = false;
+    bool fashn_fused_gelu_enabled = false;
+    size_t fashn_modulation_cache_bytes = 128 * 1024 * 1024;
     std::string backend_spec;
     std::string params_backend_spec;
     std::string split_mode_spec;
@@ -594,7 +601,9 @@ public:
             LOG_ERROR("sd_ctx_load_control_net: failed to load '%s'", path.c_str());
             return false;
         }
-        shared_loader.convert_tensors_name();
+        if (!shared_loader.convert_tensors_name()) {
+            return false;
+        }
 
         if (!ensure_backend_pair(SDBackendModule::CONTROL_NET)) {
             LOG_ERROR("sd_ctx_load_control_net: control_net backend unavailable");
@@ -858,7 +867,9 @@ public:
             }
         }
 
-        model_loader.convert_tensors_name();
+        if (!model_loader.convert_tensors_name()) {
+            return false;
+        }
 
         ggml_type wtype               = sd_type_to_ggml_type(sd_ctx_params->wtype);
         std::string tensor_type_rules = SAFE_STR(sd_ctx_params->tensor_type_rules);
@@ -921,6 +932,113 @@ public:
             return false;
         } else {
             LOG_INFO("Version: %s ", model_version_to_str[version]);
+        }
+
+        if (sd_version_is_fashn_vton(version)) {
+            for (const auto& [name, tensor] : model_loader.get_tensor_storage_map()) {
+                if (ggml_is_quantized(tensor.type)) {
+                    LOG_ERROR("Quantized FASHN checkpoints are conversion/diagnostic candidates only; inference awaits numerical and quality validation");
+                    return false;
+                }
+            }
+            const char* unsupported_models[] = {
+                sd_ctx_params->clip_l_path, sd_ctx_params->clip_g_path, sd_ctx_params->clip_vision_path,
+                sd_ctx_params->t5xxl_path, sd_ctx_params->llm_path, sd_ctx_params->llm_vision_path,
+                sd_ctx_params->high_noise_diffusion_model_path, sd_ctx_params->uncond_diffusion_model_path,
+                sd_ctx_params->embeddings_connectors_path, sd_ctx_params->vae_path, sd_ctx_params->audio_vae_path,
+                sd_ctx_params->taesd_path, sd_ctx_params->control_net_path, sd_ctx_params->ip_adapter_path,
+                sd_ctx_params->motion_module_path, sd_ctx_params->photo_maker_path, sd_ctx_params->pulid_weights_path};
+            for (const char* path : unsupported_models) {
+                if (strlen(SAFE_STR(path)) != 0) {
+                    LOG_ERROR("FASHN is a standalone pixel-space model; auxiliary encoders, VAEs and extension models are unsupported");
+                    return false;
+                }
+            }
+            if (sd_ctx_params->embedding_count != 0 || sd_ctx_params->prediction != PREDICTION_COUNT ||
+                sd_ctx_params->diffusion_conv_direct) {
+                LOG_ERROR("FASHN does not support embedding, prediction or direct-convolution overrides");
+                return false;
+            }
+            if (strlen(SAFE_STR(sd_ctx_params->model_args)) != 0) {
+                auto options = nlohmann::json::parse(sd_ctx_params->model_args, nullptr, false);
+                if (!options.is_object() || !options.contains("fashn_modulation_cache") ||
+                    !options["fashn_modulation_cache"].is_boolean()) {
+                    LOG_ERROR("FASHN model arguments require a fashn_modulation_cache boolean");
+                    return false;
+                }
+                for (auto item = options.begin(); item != options.end(); ++item) {
+                    if (item.key() != "fashn_modulation_cache" && item.key() != "fashn_modulation_cache_mib" &&
+                        item.key() != "fashn_fused_gelu") {
+                        LOG_ERROR("Unknown FASHN model argument: %s", item.key().c_str());
+                        return false;
+                    }
+                }
+                fashn_modulation_cache_enabled = options["fashn_modulation_cache"].get<bool>();
+                if (options.contains("fashn_fused_gelu")) {
+                    if (!options["fashn_fused_gelu"].is_boolean()) {
+                        LOG_ERROR("fashn_fused_gelu must be a boolean");
+                        return false;
+                    }
+                    fashn_fused_gelu_enabled = options["fashn_fused_gelu"].get<bool>();
+                }
+                if (options.contains("fashn_modulation_cache_mib")) {
+                    const auto& value = options["fashn_modulation_cache_mib"];
+                    if (!value.is_number_integer() || value < 1 || value > 128) {
+                        LOG_ERROR("FASHN modulation cache must be bounded to 1..128 MiB");
+                        return false;
+                    }
+                    fashn_modulation_cache_bytes = value.get<size_t>() * 1024 * 1024;
+                }
+                if (fashn_modulation_cache_enabled && (enable_mmap || eager_load)) {
+                    LOG_ERROR("FASHN modulation caching requires unmapped, lazy weight loading; omit --mmap and --eager-load");
+                    return false;
+                }
+            }
+            if ((sd_ctx_params->wtype != SD_TYPE_COUNT && sd_ctx_params->wtype != SD_TYPE_F32 &&
+                 sd_ctx_params->wtype != SD_TYPE_F16 && sd_ctx_params->wtype != SD_TYPE_BF16) ||
+                strlen(SAFE_STR(sd_ctx_params->tensor_type_rules)) != 0) {
+                LOG_ERROR("FASHN support requires F32/F16/BF16 matrix storage and no tensor type overrides; computation remains F32");
+                return false;
+            }
+            if (!init_backend()) {
+                return false;
+            }
+            auto backend = backend_for(SDBackendModule::DIFFUSION);
+            auto is_cpu = [](ggml_backend_t value) {
+                auto device = ggml_backend_get_device(value);
+                return device != nullptr && ggml_backend_dev_type(device) == GGML_BACKEND_DEVICE_TYPE_CPU;
+            };
+            if (!is_cpu(backend) || backend_manager.params_backend_is_disk(SDBackendModule::DIFFUSION) ||
+                !is_cpu(params_backend_for(SDBackendModule::DIFFUSION)) ||
+                backend_manager.runtime_backends(SDBackendModule::DIFFUSION).size() != 1) {
+                LOG_ERROR("Initial FASHN support requires one CPU backend with resident CPU parameters");
+                return false;
+            }
+            n_threads = n_threads > 0 ? n_threads : sd_get_num_physical_cores();
+            model_manager->set_n_threads(n_threads);
+            model_manager->set_segmented_compute_disabled(true);
+            const ggml_type matrix_storage = sd_ctx_params->wtype == SD_TYPE_COUNT ? GGML_TYPE_F32 :
+                                             sd_type_to_ggml_type(sd_ctx_params->wtype);
+            for (auto& [name, tensor] : model_loader.get_tensor_storage_map()) {
+                tensor.expected_type = FashnVTONConfig::is_quantizable_matrix(name, tensor) ? matrix_storage : GGML_TYPE_F32;
+            }
+            auto fashn_runner = std::make_shared<FashnVTONRunner>(backend, model_loader.get_tensor_storage_map(),
+                                                                "model.diffusion_model", model_manager);
+            fashn_runner->fused_gelu = fashn_fused_gelu_enabled;
+            diffusion_model = std::move(fashn_runner);
+            diffusion_model->set_flash_attention_enabled(sd_ctx_params->flash_attn || sd_ctx_params->diffusion_flash_attn);
+            if (!register_runner_params("Diffusion model", diffusion_model, SDBackendModule::DIFFUSION) ||
+                !model_manager->validate_registered_tensors()) {
+                return false;
+            }
+            if (eager_load && !model_manager->load_all_params_eagerly()) {
+                return false;
+            }
+            LOG_INFO("FASHN prepared-input try-on initialized: F32 CPU, no text encoder or VAE");
+            LOG_INFO("FASHN core matrix storage: %s; protected parameters and matrix operands: F32", ggml_type_name(matrix_storage));
+            LOG_INFO("FASHN attention: %s", (sd_ctx_params->flash_attn || sd_ctx_params->diffusion_flash_attn)
+                                               ? "flash with F32 keys and values" : "manual");
+            return true;
         }
 
         if (auto_fit_enabled) {
@@ -3863,7 +3981,7 @@ static bool sd_version_supports_video_generation(SDVersion version) {
 }
 
 static bool sd_version_supports_image_generation(SDVersion version) {
-    return !sd_version_supports_video_generation(version);
+    return !sd_version_supports_video_generation(version) && !sd_version_is_fashn_vton(version);
 }
 
 sd_ctx_t* new_sd_ctx(const sd_ctx_params_t* sd_ctx_params) {
@@ -3951,6 +4069,189 @@ SD_API bool sd_ctx_supports_image_generation(const sd_ctx_t* sd_ctx) {
         return false;
     }
     return sd_version_supports_image_generation(sd_ctx->sd->version);
+}
+
+SD_API bool sd_ctx_supports_try_on(const sd_ctx_t* sd_ctx) {
+    return sd_ctx != nullptr && sd_ctx->sd != nullptr && sd_version_is_fashn_vton(sd_ctx->sd->version);
+}
+
+SD_API void sd_try_on_params_init(sd_try_on_params_t* params) {
+    if (params == nullptr) {
+        LOG_ERROR("sd_try_on_params_init requires a parameter pointer");
+        return;
+    }
+    *params = {};
+    params->struct_size = sizeof(*params);
+    params->category = SD_TRY_ON_TOPS;
+    params->steps = 30;
+    params->cfg = 1.5f;
+    params->shift = 1.5f;
+    params->skip_cfg_last_n_steps = 1;
+    params->seed = 42;
+    params->sample_count = 1;
+}
+
+static sd::Tensor<float> fashn_prepared_image(const sd_image_t& image) {
+    sd::Tensor<float> tensor({576, 864, image.channel, 1});
+    for (uint32_t c = 0; c < image.channel; ++c) {
+        for (size_t pixel = 0; pixel < 576 * 864; ++pixel) {
+            tensor.values()[c * 576 * 864 + pixel] = image.data[pixel * image.channel + c] / 127.5f - 1.f;
+        }
+    }
+    return tensor;
+}
+
+SD_API bool generate_try_on(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params,
+                            sd_image_t** images_out, int* num_images_out) {
+    return generate_try_on_with_callbacks(sd_ctx, params, nullptr, images_out, num_images_out);
+}
+
+SD_API bool generate_try_on_with_callbacks(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params,
+                                           const sd_try_on_callbacks_t* callbacks,
+                                           sd_image_t** images_out, int* num_images_out) {
+    if (images_out != nullptr) {
+        *images_out = nullptr;
+    }
+    if (num_images_out != nullptr) {
+        *num_images_out = 0;
+    }
+    if (!sd_ctx_supports_try_on(sd_ctx) || params == nullptr || images_out == nullptr ||
+        num_images_out == nullptr || params->struct_size < sizeof(sd_try_on_params_t)) {
+        LOG_ERROR("generate_try_on requires a FASHN context, initialized parameters, and output pointers");
+        return false;
+    }
+    if (callbacks != nullptr && callbacks->struct_size < sizeof(sd_try_on_callbacks_t)) {
+        LOG_ERROR("Invalid FASHN callback structure size");
+        return false;
+    }
+    FashnVTONSamplingParams sampling{params->steps, params->cfg, params->shift, params->skip_cfg_last_n_steps};
+    if (!sampling.validate() || params->category < SD_TRY_ON_TOPS || params->category > SD_TRY_ON_ONE_PIECES ||
+        params->sample_count < 1 || params->sample_count > 4) {
+        LOG_ERROR("Invalid FASHN sampling/category/sample count (supported count: 1..4)");
+        return false;
+    }
+    const sd_image_t* images[] = {&params->ca_image, &params->garment_image, &params->person_pose, &params->garment_pose};
+    for (int i = 0; i < 4; ++i) {
+        if (images[i]->data == nullptr || images[i]->width != 576 || images[i]->height != 864 ||
+            images[i]->channel != static_cast<uint32_t>(i < 2 ? 3 : 1)) {
+            LOG_ERROR("FASHN prepared inputs must be 576x864, RGB/RGB/grayscale/grayscale");
+            return false;
+        }
+    }
+    int crop_w = params->crop_width;
+    int crop_h = params->crop_height;
+    if (crop_w == 0 && crop_h == 0 && params->crop_x == 0 && params->crop_y == 0) {
+        crop_w = 576;
+        crop_h = 864;
+    }
+    if (crop_w < 1 || crop_h < 1 || crop_w > 576 || crop_h > 864 ||
+        params->crop_x < 0 || params->crop_y < 0 ||
+        params->crop_x > 576 - crop_w || params->crop_y > 864 - crop_h) {
+        LOG_ERROR("FASHN crop must be a positive rectangle inside the prepared canvas");
+        return false;
+    }
+    auto& sd = *sd_ctx->sd;
+    sd.reset_cancel_flag();
+    auto is_cancelled = [&]() {
+        return sd.get_cancel_flag() == SD_CANCEL_ALL ||
+               (callbacks != nullptr && callbacks->cancelled != nullptr && callbacks->cancelled(callbacks->data));
+    };
+    if (is_cancelled()) {
+        LOG_INFO("FASHN request cancelled before preparation");
+        return false;
+    }
+    auto ca = fashn_prepared_image(params->ca_image);
+    auto garment = fashn_prepared_image(params->garment_image);
+    auto pose = fashn_prepared_image(params->person_pose);
+    auto garment_pose = fashn_prepared_image(params->garment_pose);
+    sd::Tensor<int32_t> category({1}, {static_cast<int32_t>(params->category)});
+    FashnVTONDiffusionExtra condition{&ca, &garment, &pose, &garment_pose, &category};
+    sd.rng->manual_seed(params->seed);
+    const size_t per_sample = 576 * 864 * 3;
+    auto noise = sd.rng->randn(static_cast<uint32_t>(per_sample * params->sample_count));
+    auto* cached_runner = sd.fashn_modulation_cache_enabled ? dynamic_cast<FashnVTONRunner*>(sd.diffusion_model.get()) : nullptr;
+    struct EndModulationRequest {
+        FashnVTONRunner* runner;
+        ~EndModulationRequest() {
+            if (runner)
+                runner->finish_modulation_request();
+        }
+    } end_modulation_request{cached_runner};
+    if (sd.fashn_modulation_cache_enabled) {
+        if (!cached_runner) {
+            LOG_ERROR("FASHN modulation caching requires the FASHN runner");
+            return false;
+        }
+        auto pairs = fashn_vton_modulation_pairs(sampling, static_cast<int>(params->category));
+        if (pairs.empty())
+            return false;
+        if (!cached_runner->prepare_modulation_request(sd.n_threads, pairs, [&sd, cached_runner]() {
+                cached_runner->runner_end();
+                return sd.model_manager->unregister_param_tensors("Diffusion model") &&
+                       sd.register_runner_params("Diffusion model", sd.diffusion_model, SDBackendModule::DIFFUSION) &&
+                       sd.model_manager->validate_registered_tensors();
+            }, sd.fashn_modulation_cache_bytes, is_cancelled))
+            return false;
+    }
+    std::vector<sd::Tensor<float>> completed;
+    for (int sample = 0; sample < params->sample_count; ++sample) {
+        if (sd.get_cancel_flag() == SD_CANCEL_NEW_LATENTS) {
+            break;
+        }
+        sd::Tensor<float> initial({576, 864, 3, 1},
+                                  std::vector<float>(noise.begin() + sample * per_sample,
+                                                     noise.begin() + (sample + 1) * per_sample));
+        auto start = std::chrono::steady_clock::now();
+        auto output = sample_fashn_vton(*sd.diffusion_model, sd.n_threads, initial, condition, sampling,
+                                       is_cancelled,
+                                       [&](int step, int total) {
+                                           auto cb = callbacks != nullptr ? callbacks->progress : sd_get_progress_callback();
+                                           if (cb != nullptr) {
+                                               float seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - start).count();
+                                               cb(sample * total + step, params->sample_count * total, seconds / step,
+                                                  callbacks != nullptr ? callbacks->data : sd_get_progress_callback_data());
+                                           }
+                                       });
+        if (output.empty() || is_cancelled()) {
+            return false;
+        }
+        completed.push_back(std::move(output));
+    }
+    if (completed.empty() || is_cancelled()) {
+        LOG_INFO("FASHN request cancelled before any samples completed");
+        return false;
+    }
+    auto results = static_cast<sd_image_t*>(calloc(completed.size(), sizeof(sd_image_t)));
+    if (results == nullptr) {
+        LOG_ERROR("Cannot allocate FASHN result array");
+        return false;
+    }
+    for (size_t sample = 0; sample < completed.size(); ++sample) {
+        results[sample] = {static_cast<uint32_t>(crop_w), static_cast<uint32_t>(crop_h), 3, nullptr};
+        results[sample].data = static_cast<uint8_t*>(malloc(static_cast<size_t>(crop_w) * crop_h * 3));
+        if (results[sample].data == nullptr) {
+            LOG_ERROR("Cannot allocate FASHN RGB output");
+            free_sd_images(results, static_cast<int>(completed.size()));
+            return false;
+        }
+        for (int row = 0; row < crop_h; ++row) {
+            for (int col = 0; col < crop_w; ++col) {
+                for (int c = 0; c < 3; ++c) {
+                    size_t source = c * 576 * 864 + (row + params->crop_y) * 576 + col + params->crop_x;
+                    float pixel = std::clamp((completed[sample].values()[source] + 1.f) * 0.5f, 0.f, 1.f);
+                    results[sample].data[(row * crop_w + col) * 3 + c] = static_cast<uint8_t>(pixel * 255.f);
+                }
+            }
+        }
+    }
+    if (is_cancelled()) {
+        LOG_INFO("FASHN request cancelled during output conversion");
+        free_sd_images(results, static_cast<int>(completed.size()));
+        return false;
+    }
+    *images_out = results;
+    *num_images_out = static_cast<int>(completed.size());
+    return true;
 }
 
 SD_API bool sd_ctx_supports_video_generation(const sd_ctx_t* sd_ctx) {
@@ -5633,6 +5934,10 @@ SD_API bool generate_image(sd_ctx_t* sd_ctx,
     if (sd_ctx == nullptr || sd_img_gen_params == nullptr) {
         return false;
     }
+    if (sd_ctx_supports_try_on(sd_ctx)) {
+        LOG_ERROR("FASHN is a prepared-input try-on model; use generate_try_on / --mode try_on");
+        return false;
+    }
 
     // MiniMax-H3 is video-only. Its denoiser always splits the packed latent into a video and an
     // audio half, and only generate_video ever computes the audio length, so reaching this
@@ -6883,6 +7188,11 @@ SD_API bool generate_video(sd_ctx_t* sd_ctx,
     }
     if (num_frames_out != nullptr) {
         *num_frames_out = 0;
+    }
+
+    if (sd_ctx_supports_try_on(sd_ctx)) {
+        LOG_ERROR("FASHN does not support video generation; use generate_try_on");
+        return false;
     }
 
     if (sd_ctx->sd->animatediff_loaded && sd_version_supports_animatediff(sd_ctx->sd->version)) {

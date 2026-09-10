@@ -1,4 +1,7 @@
 #include <cstdlib>
+#include <atomic>
+#include <chrono>
+#include <csignal>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -16,6 +19,12 @@
 #ifdef HAVE_INDEX_HTML
 #include "frontend/dist/gen_index_html.h"
 #endif
+
+static std::atomic<bool> try_on_shutdown_requested{false};
+static_assert(std::atomic<bool>::is_always_lock_free, "Signal handling requires lock-free atomics");
+static void try_on_shutdown_signal(int) {
+    try_on_shutdown_requested.store(true, std::memory_order_relaxed);
+}
 
 static void print_usage(const char* argv0, const std::vector<ArgOptions>& options_list) {
     std::cout << version_string() << "\n";
@@ -93,6 +102,29 @@ int main(int argc, const char** argv) {
         LOG_ERROR("new_sd_ctx_t failed");
         return 1;
     }
+    if (sd_ctx_supports_try_on(sd_ctx.get()) && ctx_params.rng_type != CPU_RNG) {
+        LOG_ERROR("FASHN server currently requires --rng cpu");
+        return 1;
+    }
+    if (sd_ctx_supports_try_on(sd_ctx.get())) {
+        auto options  = default_gen_params.get_options();
+        auto supplied = [&](const auto& entries) {
+            for (const auto& option : entries) {
+                for (int i = 1; i < argc; ++i) {
+                    if ((!option.short_name.empty() && option.short_name == argv[i]) ||
+                        (!option.long_name.empty() && option.long_name == argv[i])) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        if (supplied(options.string_options) || supplied(options.int_options) ||
+            supplied(options.float_options) || supplied(options.bool_options) || supplied(options.manual_options)) {
+            LOG_ERROR("FASHN server does not use generic generation CLI defaults; put steps, cfg, shift and seed in the try_on request JSON");
+            return 1;
+        }
+    }
 
     std::mutex sd_ctx_mutex;
 
@@ -114,9 +146,29 @@ int main(int argc, const char** argv) {
         &async_job_manager,
     };
 
+    std::string preparation_error;
+    if (!initialize_try_on_preparer(runtime, preparation_error)) {
+        LOG_ERROR("%s", preparation_error.c_str());
+        return 1;
+    }
+    const bool is_try_on = sd_ctx_supports_try_on(sd_ctx.get());
+    if (is_try_on) {
+        bool signals_ok = std::signal(SIGINT, try_on_shutdown_signal) != SIG_ERR &&
+                          std::signal(SIGTERM, try_on_shutdown_signal) != SIG_ERR;
+#ifdef SIGBREAK
+        signals_ok = signals_ok && std::signal(SIGBREAK, try_on_shutdown_signal) != SIG_ERR;
+#endif
+        if (!signals_ok) {
+            LOG_ERROR("Could not install try-on shutdown signal handlers");
+            return 1;
+        }
+    }
     std::thread async_worker(async_job_worker, std::ref(runtime));
 
     httplib::Server svr;
+    if (sd_ctx_supports_try_on(sd_ctx.get())) {
+        svr.set_payload_max_length(SD_TRY_ON_MAX_REQUEST_BYTES);
+    }
 
     svr.set_pre_routing_handler([](const httplib::Request& req, httplib::Response& res) {
         std::string origin = req.get_header_value("Origin");
@@ -147,7 +199,31 @@ int main(int argc, const char** argv) {
     register_sdcpp_api_endpoints(svr, runtime);
 
     LOG_INFO("listening on: http://%s:%d\n", svr_params.listen_ip.c_str(), svr_params.listen_port);
-    svr.listen(svr_params.listen_ip, svr_params.listen_port);
+    bool listening_ok = false;
+    if (is_try_on) {
+        if (svr.bind_to_port(svr_params.listen_ip, svr_params.listen_port)) {
+            std::atomic<bool> finished{false};
+            std::thread shutdown_monitor([&] {
+                while (!finished.load()) {
+                    // httplib ignores stop() until the bound listener is running.
+                    if (try_on_shutdown_requested.load(std::memory_order_relaxed) && svr.is_running()) {
+                        stop_try_on_jobs(async_job_manager);
+                        svr.stop();
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                }
+            });
+            listening_ok = svr.listen_after_bind();
+            finished.store(true);
+            shutdown_monitor.join();
+        }
+        stop_try_on_jobs(async_job_manager);
+        if (!listening_ok && !try_on_shutdown_requested.load())
+            LOG_ERROR("Failed to listen on %s:%d", svr_params.listen_ip.c_str(), svr_params.listen_port);
+    } else {
+        listening_ok = svr.listen(svr_params.listen_ip, svr_params.listen_port);
+    }
 
     {
         std::lock_guard<std::mutex> lock(async_job_manager.mutex);
@@ -155,5 +231,5 @@ int main(int argc, const char** argv) {
     }
     async_job_manager.cv.notify_all();
     async_worker.join();
-    return 0;
+    return is_try_on && !listening_ok && !try_on_shutdown_requested.load() ? 1 : 0;
 }

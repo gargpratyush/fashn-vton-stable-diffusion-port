@@ -1,0 +1,42 @@
+{
+  "metrics": {
+    "changed_channels": 149095,
+    "total_channels": 1327104,
+    "changed_pixels": 124006,
+    "max_abs": 11.0,
+    "mae": 0.11341236255787036,
+    "rmse": 0.3428698573818939,
+    "psnr_db": 57.42821747290804
+  },
+  "sources": {
+    "person": {
+      "path": "local-experiment\\quality-fixtures\\model_8.png",
+      "sha256": "bf4f2064cc6efe6aa4b6bb503d6d2aadba4feff13b5784457ed7ddd63c1fc20f"
+    },
+    "garment": {
+      "path": "local-experiment\\source\\examples\\data\\model.webp",
+      "sha256": "412ce3a20bd0bbf969cf526c759999061c91e8054bc7ec5a54f2780ca0942da5"
+    },
+    "native": {
+      "path": "local-experiment\\checkpoint38-integrated\\bottoms-mixed\\step-19.safetensors",
+      "sha256": "1bbddc83776cf0c1fd167a9292257186ca408748555a039a7c3346acdbf3999f",
+      "crop": {
+        "x": 0,
+        "y": 48,
+        "width": 576,
+        "height": 768
+      }
+    },
+    "reference": {
+      "path": "local-experiment\\checkpoint38-integrated\\bottoms-q8\\step-19.safetensors",
+      "sha256": "d758f16c32bd7d59572564e7501054c82d230f5f9cfce5b24d01684cc06d4fdd",
+      "crop": {
+        "x": 0,
+        "y": 48,
+        "width": 576,
+        "height": 768
+      }
+    }
+  },
+  "scope": "The four original-value F32 restorations remain frozen from the prior bottoms study. No new tuning; remaining boundary errors are not eliminated."
+}

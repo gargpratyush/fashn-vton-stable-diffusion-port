@@ -1,0 +1,36 @@
+{
+  "metrics": {
+    "changed_channels": 82,
+    "total_channels": 1327104,
+    "changed_pixels": 82,
+    "max_abs": 1.0,
+    "mae": 6.178867669753087e-05,
+    "rmse": 0.007860577376855396,
+    "psnr_db": 90.2217146665858
+  },
+  "sources": {
+    "person": {
+      "path": "local-experiment\\quality-fixtures\\model_5.png",
+      "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+    },
+    "garment": {
+      "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+      "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+    },
+    "native": {
+      "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-blas\\step-19.safetensors",
+      "sha256": "72c5ea947d33dac100a1f0d9e4c2364ec57e5b9ce1e7cca14a01cc2680cd4ba0",
+      "crop": {
+        "x": 0,
+        "y": 48,
+        "width": 576,
+        "height": 768
+      }
+    },
+    "reference": {
+      "path": "local-experiment\\checkpoint27-upstream-cardigan\\sample-0.png",
+      "sha256": "574ab54cb2d92bdef468cc3c9ba308346898f4660bf29dece21646f36be78646"
+    }
+  },
+  "scope": "Original unmodified Python sampler, default attention/batched CFG, versus optimized native BLAS. These are final pixels, not a Python intermediate-trajectory comparison."
+}

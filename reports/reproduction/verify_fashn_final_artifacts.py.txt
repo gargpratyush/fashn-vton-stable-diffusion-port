@@ -1,0 +1,80 @@
+import json
+import re
+import sys
+from html.parser import HTMLParser
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+from safetensors.numpy import load_file
+
+root = Path(r"C:\source\fashn-vton-reference")
+sys.path.insert(0, r"C:\source\stable-diffusion.cpp\scripts")
+from build_fashn_gallery import display_pixels, pixel_metrics
+from compare_fashn_case_output import crop_pixels
+from export_fashn_vton_reference import sha256
+
+integrated = root / "checkpoint38-integrated"
+gallery = root / r"reports\comparison-gallery-optimized"
+summary = json.loads((integrated / "final-summary.json").read_text())
+assert sha256(integrated / "results.json") == summary["acceptance_sha256"]
+assert sha256(gallery / "manifest.json") == summary["gallery_manifest_sha256"]
+manifest = json.loads((gallery / "manifest.json").read_text())
+assert len(manifest["cases"]) == 10
+for name, row in manifest["cases"].items():
+    for key, source in row["sources"].items():
+        assert sha256(Path(source["path"])) == source["sha256"]
+        source_pixels = display_pixels(Path(source["path"]), key in ("native", "reference"))
+        if "crop" in source:
+            source_pixels = crop_pixels(source_pixels, source["crop"])
+        with Image.open(gallery / name / (key + ".png")) as image:
+            assert np.array_equal(np.asarray(image), source_pixels)
+    with Image.open(gallery / name / "native.png") as a, Image.open(gallery / name / "reference.png") as b:
+        assert a.mode == b.mode == "RGB" and a.size == b.size == (576, 768)
+        assert pixel_metrics(np.asarray(b), np.asarray(a)) == row["metrics"]
+
+references = {"cardigan": integrated / "cardigan-floating-cpu",
+              "bottoms": root / r"checkpoint34-full-acceptance\full-trajectory"}
+for case, reference in references.items():
+    expected = json.loads((reference / "manifest.json").read_text())
+    initial = load_file(str(reference / "initial.safetensors"))
+    for policy in ("q8", "mixed"):
+        directory = integrated / f"{case}-{policy}"
+        actual = json.loads((directory / "manifest.json").read_text())
+        for key in ("steps", "cfg", "shift", "skip_cfg_last_n_steps", "seed", "category", "threads", "schedule"):
+            assert actual[key] == expected[key], (case, policy, key)
+        noise = load_file(str(directory / "initial.safetensors"))
+        assert initial.keys() == noise.keys()
+        assert all(np.array_equal(initial[key], noise[key]) for key in initial)
+        quality = summary["quantized_quality"][f"{case}-{policy}"]
+        assert quality["pixels"] == manifest["cases"][f"{case}-{policy}-floating"]["metrics"]
+        assert quality["same_policy_preserved"] and quality["failed_velocity_steps"]
+
+
+class LocalLinks(HTMLParser):
+    def handle_starttag(self, tag, attrs):
+        for key, value in attrs:
+            if key in ("href", "src"):
+                assert ":" not in value and (gallery / value).is_file(), value
+
+
+LocalLinks().feed((gallery / "index.html").read_text())
+documents = [root / "reports" / name for name in
+             ("memory-and-latency-optimization-results.md", "checkpoint38-integrated-progress.md")]
+for path in documents:
+    text = path.read_text()
+    for target in re.findall(r"\]\(([^)]+)\)", text):
+        if not target.startswith("https://"):
+            assert (path.parent / target).is_file(), target
+
+record = {"passed": True, "gallery_cases": 10, "matched_quantized_sampling_and_initial_states": 4,
+          "artifact_sha256": {str(path): sha256(path) for path in
+                             [*documents, integrated / "final-summary.json", gallery / "manifest.json",
+                              integrated / "openblas-dll-memory.json"]},
+          "post_probe_artifact_sha256": {
+              str(path): sha256(path) for path in
+              [Path(r"C:\source\fashn-native-deps\openblas-0.3.34\package\bin\libopenblas.dll"),
+               Path(__file__).with_name("probe_openblas_memory.py")]},
+          "scope": "Final source-image hashes, exact render/crop/metrics, sampling/noise matching and local links; no inference repeated."}
+(integrated / "finalization.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+print(json.dumps({"passed": record["passed"], "gallery_cases": 10, "matched_quantized_cases": 4}))

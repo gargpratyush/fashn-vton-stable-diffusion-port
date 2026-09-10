@@ -1,0 +1,345 @@
+{
+  "scope": "Five completed CPU diagnostic image runs; two photographic quantization cases. Single non-interleaved process measurements. Pixel agreement is not perceptual/product fidelity.",
+  "runs": {
+    "checkpoint26-q8-bottoms": {
+      "measurement_path": "local-experiment\\checkpoint26-q8-bottoms-measurement\\measurement.json",
+      "measurement_sha256": "46a096dfc882a12742663ba7a72d739b855faedbbc16994e314ac363e3c98100",
+      "manifest_sha256": "7579427935922573a91e6706e6caeda6e0a66a3d73eb364126f802d6c1b9faec",
+      "wall_seconds": 1947.3475578999787,
+      "peak_working_set_bytes": 4457504768,
+      "sampled_peak_private_bytes": 2804740096,
+      "actual_matrix_counts": {
+        "q8_0": 104
+      },
+      "upcast_matrices": false,
+      "state_sha256": {
+        "step-0.safetensors": "97508d1791a2c6a3d37eed0382b5d7e6d75f6b5aa7694d2da50cde4f07c0a224",
+        "step-1.safetensors": "ffa49465be063c186d4ecb911865a941ab04f9386857bafbb123b696b62d03fb",
+        "step-2.safetensors": "110a6648662fbd290cfc32362d5b771694018480537a8fdf8e5afd6fabe20b82",
+        "step-3.safetensors": "79cf2b3b3bbab6a13c17539b91ce13079c08e49423933ce752546443b2fe771f",
+        "step-4.safetensors": "85b99ea37c8ef76ad436816e6c93da532be620ddd559a35093deafebade8c4fb",
+        "step-5.safetensors": "5925b897b0134bd855bb92e50b4b350ec0deb8564f75d10c589aa89a39c60da6",
+        "step-6.safetensors": "a56eb7355f5f03efd968fe79cf7b6df6a63df0118eea58a5127dc855b2848668",
+        "step-7.safetensors": "0779f7a0a752b997d485120e6e14831a00428554533c1f156cc4a6592018980d",
+        "step-8.safetensors": "d5618a1c24222b6fa14bb764c56d760da9708707c260cd0e751ec33c8a723dbb",
+        "step-9.safetensors": "2746df00c6d4b6aa1116992159a02f912f91acb33f94187ee338172518b66b6b",
+        "step-10.safetensors": "a6d5cdc7d8aee93d35458a3d264b193a2174558ab69975708fd1cfed26a6e779",
+        "step-11.safetensors": "61ffc2a90698cd703a80132feb5cd01165c442d445c493d6e8bd7501de3a816e",
+        "step-12.safetensors": "4415aba5b0d021090122823f808361a38c8a2e07989b3e172501fe876b73f331",
+        "step-13.safetensors": "f25d17618dde6f20fbca0448e5204d2be88bbe9e5e51db1fb280f1c3634dd2ab",
+        "step-14.safetensors": "a3c1213d4ff1e1ad104f875abf7365dc77dba52c1e1f86f99919cbbaa4b168a7",
+        "step-15.safetensors": "f5db3543a8f742629470e9842f09a840ab9b96c14e379f17df2fb62391cd213b",
+        "step-16.safetensors": "f0eff71bad5976bbba325bb9f23dcb61b2c4dc988d3296f34e49f407d47a28f1",
+        "step-17.safetensors": "891bb1a238424a80411acef1d9dbc9acde3c132ca2d57d93db191a4f49d11eca",
+        "step-18.safetensors": "d0553fa7708025adc7afd5ba8b251948d79dbe90b0d1973e3dd2b39c8c1d1c8a",
+        "step-19.safetensors": "d758f16c32bd7d59572564e7501054c82d230f5f9cfce5b24d01684cc06d4fdd"
+      },
+      "intermediate_floating_reference_comparison_available": true
+    },
+    "checkpoint30-mixed-top4-bottoms": {
+      "measurement_path": "local-experiment\\checkpoint30-mixed-top4-bottoms-measurement\\measurement.json",
+      "measurement_sha256": "12bf50cc5f0ded3d304335f6419bb33542f1efab041c9165f83fd1efd79ae570",
+      "manifest_sha256": "1ab5972e9d488955aad9e0e615e44f55a6e57c6b972c423aa4f5559c8de1ac5e",
+      "wall_seconds": 2007.3931195999903,
+      "peak_working_set_bytes": 4592234496,
+      "sampled_peak_private_bytes": 3001339904,
+      "actual_matrix_counts": {
+        "q8_0": 100,
+        "f32": 4
+      },
+      "upcast_matrices": false,
+      "state_sha256": {
+        "step-0.safetensors": "87c2a432c246e869e22be8fd6b5c05f2b8505e4d2aed1e237da2f490d322bade",
+        "step-1.safetensors": "433c9a3ce5f23fc789d7887f4bfbdb013d2ec20542e4cca589104fc7e2c9a106",
+        "step-2.safetensors": "0cedbe4778b695cfca04e403e6749eec1f17a902ec8c9a4ac2fccab8e544387d",
+        "step-3.safetensors": "ed909e40c8acfae4100f636d8a8357fe00ec84db2df7b6267c534f2d528aec74",
+        "step-4.safetensors": "8828e60f0815e632e053da70327e27ef05673eba8dd2380c63b32b7c501aaa5d",
+        "step-5.safetensors": "ea5e9551935679eb4ab54cbecdd19f00e429ea7bc0de55a0c04afa7def04710c",
+        "step-6.safetensors": "89b6543fd09e4e4f5c156ee7a0f119927f0eb61b0d59df234c076b8c2fef024a",
+        "step-7.safetensors": "180651643fba889e51352ab791768c85538574a17598df5ac832c0a032c2ec1e",
+        "step-8.safetensors": "6fab60dd72c88695e0fbf44481674fb4af24a5a239f54ef79530ca9605358c26",
+        "step-9.safetensors": "69c7fc797dfee1e5c092912c72eef59fc8295c1aa3c0407427048b02ba344492",
+        "step-10.safetensors": "739b330de8fb406d2876d938cd7275ce43e5947ab64929bda821bc782c6f17a9",
+        "step-11.safetensors": "551e9bad7fdfa914173000937a091a89dd477e9c162d8cf9363f094bb6ba2e9c",
+        "step-12.safetensors": "d935e5d30554245c5e9f44484d657087434928ca0263eae371e84a00b4fa78f5",
+        "step-13.safetensors": "8ecb097ca50d4ab69ff5c6b10accff830f4927a0adb2d86417f4ff95c7be760d",
+        "step-14.safetensors": "e8619009278beb161e95c8ae4eedecff7b822d3aec088d1a018343ab86ab6b43",
+        "step-15.safetensors": "9f645d371b3931fa6ace8e67a4981d4994de776d30cc25477523adc76bec9fda",
+        "step-16.safetensors": "425a32dd4a13f25ac6ba20c7a405d3ce9cee3b14f37be621a68eb83c5dc3064e",
+        "step-17.safetensors": "269480e124c4295ecd8c8ccef7e4326b7f6bd4cf50bea91b31fdb5f0f6e47290",
+        "step-18.safetensors": "2e8c531e19c9768d56ec7f8676cf2016f5fe75445201eff5bcb4a497e3ba1e17",
+        "step-19.safetensors": "1bbddc83776cf0c1fd167a9292257186ca408748555a039a7c3346acdbf3999f"
+      },
+      "intermediate_floating_reference_comparison_available": true
+    },
+    "checkpoint26-q8-cardigan": {
+      "measurement_path": "local-experiment\\checkpoint26-q8-cardigan-measurement\\measurement.json",
+      "measurement_sha256": "b3e4f3bb42e6b7edf470b05a2307d7bdfa5e73ff1a52d8ba340c57eb03d277c7",
+      "manifest_sha256": "7639c0d64f017b118199a2c3ceae4b10a75121b9f1885ad677496c8727e22839",
+      "wall_seconds": 1956.6835087999934,
+      "peak_working_set_bytes": 4470542336,
+      "sampled_peak_private_bytes": 2868330496,
+      "actual_matrix_counts": {
+        "q8_0": 104
+      },
+      "upcast_matrices": false,
+      "state_sha256": {
+        "step-0.safetensors": "bea1ce0b6619c9c53681df1acc3766df754fc88c24377afa09a334e2e4df9907",
+        "step-1.safetensors": "4f3b8c81f6c8dca6dcf3e0ed67ff1d4904e324c890de6f366dd4937367cd1455",
+        "step-2.safetensors": "78f2b1c159778c19f78e3a64c35db367215af8e4616310b4f449c480852de43c",
+        "step-3.safetensors": "b0f8f9f8d7b3db1ace5dbdf0c3c5bd635117452f02e4f248ad3deb1cb4cea4c0",
+        "step-4.safetensors": "bd8c0ac19797d78da5c41d58a7302e6fa6f889ae694b9f43ce9290976ffd5819",
+        "step-5.safetensors": "eaa4444afb2d7fc2e2da450f18472a60c175289771462068d7de817e66636d09",
+        "step-6.safetensors": "3abc99ea8bca45915a439658450b9eed0cb6a722e6872228fb78ccb9d8114d02",
+        "step-7.safetensors": "afb03f40bbb21c0a3e164fbb93d6b1526853730e90bddc0eb2839de8b374dec0",
+        "step-8.safetensors": "84f97f2f906a48a2a7d11532aff0d549c8fe8b62e8a09c2d84f330f811a74ecc",
+        "step-9.safetensors": "2625611ab4e4801d30e7751e81467ca417f640ac67f6ecb95e7b8db7bdbe4d89",
+        "step-10.safetensors": "52e34816e3af850d6caf3399b0844fc3017bf438f9687e28b8769002272b4460",
+        "step-11.safetensors": "708e263c09ed8d12ab632713cb2312df02230d6db58c2f94cdb9764386b8cde9",
+        "step-12.safetensors": "d839de26dca87341f743826046e579f4bdb03f8bf6d5a3f30dc2e9b50d69611f",
+        "step-13.safetensors": "c7c3bc291c97068a78ee8cb9d986a296024d919b4dedb11e0a11791160015cc7",
+        "step-14.safetensors": "b0c200999d66d3bb8a26aa06fa325fdce33bf3cad03aaa1feb4ef619693ee46e",
+        "step-15.safetensors": "28c596ae74bed5056a2557045cd0aa5bd76a0dae5a1b7e92e22f91c99fa1a97b",
+        "step-16.safetensors": "da68a2ac2de75631bc055cf7a1747cdb581b5d65aa93c57f965661b148c4c1e0",
+        "step-17.safetensors": "7fb1f40cbe66697a70a60cef43325a697c42ccaa3ca3c3ff2e17c564db5cb0c1",
+        "step-18.safetensors": "5f5e9a22e701742975aaa85dfae2d2f3e8250d5444910fb88aa1208341043597",
+        "step-19.safetensors": "572e1771da63107c84f40701d3d877fe37aead181fea63a6fe6dc054263101f4"
+      },
+      "intermediate_floating_reference_comparison_available": false
+    },
+    "checkpoint30-mixed-top4-cardigan": {
+      "measurement_path": "local-experiment\\checkpoint30-mixed-top4-cardigan-measurement\\measurement.json",
+      "measurement_sha256": "1e1efbdaa6d41139aa98538309410aff67784742ea30449f1a9169ed5e9eac59",
+      "manifest_sha256": "fe1fdf83c505a8d90c43f3619bea21c1d6989e7d03227da2498d5df2bf3c284a",
+      "wall_seconds": 1975.8638154999935,
+      "peak_working_set_bytes": 4621623296,
+      "sampled_peak_private_bytes": 3120369664,
+      "actual_matrix_counts": {
+        "q8_0": 100,
+        "f32": 4
+      },
+      "upcast_matrices": false,
+      "state_sha256": {
+        "step-0.safetensors": "a011a4022d7fa28ea7a2aeb643288364f76f1fe08787797c82aebf2986c40b44",
+        "step-1.safetensors": "04a3beac6f643fd5a77e1232e1c0cb937bda878c873ccd363fc2964d94836fa6",
+        "step-2.safetensors": "b426fd35a737c9a1ad0d6ef4e554600deca07da74d00b5f9d525ecb001fd1a29",
+        "step-3.safetensors": "4cb1ff8cf1b8b7dd46d1c6939f724e84e19dfd35688bf3bd1fe749011627e83d",
+        "step-4.safetensors": "690a9ddbfbfecd900feacc555f0e6e2267bbef351ff60ea138c8c3c2bed150ae",
+        "step-5.safetensors": "e8f0f5e4db050dad636762dec47e8b7b25e07920b2d06868f9f6610ba5877f5a",
+        "step-6.safetensors": "b5c773578444dc48f8c0a8a90e365cb1c0e8ebb4d952a6a20d2981c7c6d39eea",
+        "step-7.safetensors": "411b5548a77cefd58ad59b5682dc647034292ae7f0dc0332479da0cacf4c394b",
+        "step-8.safetensors": "434646b5a04ad78c0cd156aeb8478d8908ce18f5d9f2c4b688e5fb8c548ef63f",
+        "step-9.safetensors": "8d234ed6551d8169ad4614b35bc84d0b4f6730c1fba7a1c18fc20f32dfbe8fdf",
+        "step-10.safetensors": "1dff2de2ee78923bc3e1b9ddfef6acac3aefa63da546e1f6d29c5b997a4fed35",
+        "step-11.safetensors": "b6426923ea616dd3fe86704ad25b2f9f9d723cdb0de2f28a0ee89991a455b6b1",
+        "step-12.safetensors": "58aeba18e2be4663a32f59cffd7470be7739b7e9b78a20633f2e9101308d24d2",
+        "step-13.safetensors": "ee0fd7292037fdc6e952d74a36130020cff60d75d6a181c6d71a6cb4bc1bb71f",
+        "step-14.safetensors": "6eff7715da70b65d290d4ae4195945cc64c2d36b6114c5c0c18e3e2e5322df75",
+        "step-15.safetensors": "f960d36c67c837b298e7a8b5ab67fe02bb6a8cad08279d16bef25be1495e10d1",
+        "step-16.safetensors": "f29cc0f9317c4491bef6a1caf46ace192a3a811b614e21b4c6f368694b70cc14",
+        "step-17.safetensors": "ac08e9a2c0247cfb986767b6b314df9beb8e31f9a2f0e116f7f983bc019cd4d5",
+        "step-18.safetensors": "4f5429685c781683739e3b54bf33f7e6d67aae3e55e2c3bd6ad5aa7f787599c4",
+        "step-19.safetensors": "b2d94e3032a671286a455d745a10fe94c126c151ff2b97cb90f6da9a787b90b1"
+      },
+      "intermediate_floating_reference_comparison_available": false
+    },
+    "checkpoint26-bf16-bottoms-control": {
+      "measurement_path": "local-experiment\\checkpoint26-bf16-bottoms-control-measurement\\measurement.json",
+      "measurement_sha256": "8ce3289d3f5099ec06aca81a1143e8dffef6583005177969dbe25718d4ba3859",
+      "manifest_sha256": "80d0f6e83b59eb087488d27924777b8f376b1c8596df428f41721e8adf72812e",
+      "wall_seconds": 2640.8715715,
+      "peak_working_set_bytes": 3716132864,
+      "sampled_peak_private_bytes": 1908715520,
+      "actual_matrix_counts": {
+        "bf16": 104
+      },
+      "upcast_matrices": true,
+      "state_sha256": {
+        "step-0.safetensors": "f1c78a6ef549581e300621b331aca44ce39d445ce0acece90304c8df3eca7d4c",
+        "step-1.safetensors": "5beacc28c09bf1c1bb1ee6fa9539d7f6de99758bca9edd0666802bd4a5081099",
+        "step-2.safetensors": "8b4f943b3555a1c60c8ad0b963f3903bd6e518979b83617e6ae3cb11b71606a5",
+        "step-3.safetensors": "5a9c2eb7a0edef9c0bf8dda4f55623bbf9002f238a64ba3d3f509913219e7d05",
+        "step-4.safetensors": "077332764b054d403daa41ded0b85f33ddf1fa8a9e24596d8d07c46f8df52b76",
+        "step-5.safetensors": "5c6045145121b7186911383e7ec3c4f951cf1729557d93c7ec0ff52cfba495c4",
+        "step-6.safetensors": "05ef2001ceed1f53bce33f7a8dee2a6e2a31c4c0bd34c2d5afa97e76359f5c04",
+        "step-7.safetensors": "6cab88cc638c5e1ce7e1658e7a35bc437b4ee7dcd7ad373a88838e4172561050",
+        "step-8.safetensors": "e5676b0ccd851177d9667e470574fe639753cd3b73d09c78304463a74b9d1689",
+        "step-9.safetensors": "73e1ce5f8241dbb469e748305a70ea20d80eee2c058207de166a52684d0e33ec",
+        "step-10.safetensors": "9694a04e371bc701e3019b026f60dd26fb50ea465d68fbb6762ad6a9a31d214c",
+        "step-11.safetensors": "3aa2a4baf4f104b97c84839e24a82bd60437801d6bc39455b7e376922844dffe",
+        "step-12.safetensors": "09ef860ee8a348e8d58214292c353d3db2eeed3de4979592467d587b9b2049c9",
+        "step-13.safetensors": "8d33d98d71bcd34897f03cb65a0435299235b4dd8800a9b344d655feb593fb17",
+        "step-14.safetensors": "ecceb830e32bc0397952fd93e651848d818a0975f78908d6df4b62deb4d010be",
+        "step-15.safetensors": "82ec6be114c0417df5cd856218e976f8715dc9a057b870635134e2285e55f807",
+        "step-16.safetensors": "1b2ef091dfdd0c134ada4f35d41ac4745d4723ea8ef1aaf571d47aedfbb92012",
+        "step-17.safetensors": "be121ca52f2963052e9d547fb34d4f56ae461abf9ee740ad4d52292d283395b1",
+        "step-18.safetensors": "8842e1032c08c0027e257047c481e4b3c65f87ce5f4c3db58eb69c715c55bc0f",
+        "step-19.safetensors": "74b9369814a64ff265b69e1e1ebf4a90fd69c8ec127098c2794b3b798247b615"
+      },
+      "intermediate_floating_reference_comparison_available": true
+    }
+  },
+  "gallery_cases": {
+    "original-tops-oracle": {
+      "metrics": {
+        "changed_channels": 101,
+        "total_channels": 1492992,
+        "changed_pixels": 101,
+        "max_abs": 1.0,
+        "mae": 6.764939128943758e-05,
+        "rmse": 0.008224925002055494,
+        "psnr_db": 89.82816467707036
+      },
+      "native_png_sha256": "821459c4cdb9305d68baa036ddb0f1b42a185d4dc685a50da531b0c280c4f1fb",
+      "reference_png_sha256": "4592843a7d48f29c403e34eaa46de35abe46f907ff5d6dd44e9ca39602601dae"
+    },
+    "bottoms-oracle": {
+      "metrics": {
+        "changed_channels": 43,
+        "total_channels": 1327104,
+        "changed_pixels": 43,
+        "max_abs": 1.0,
+        "mae": 3.240137924382716e-05,
+        "rmse": 0.005692220941234376,
+        "psnr_db": 93.02516863462711
+      },
+      "native_png_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "reference_png_sha256": "3bb26bfdb07705df7e6d2164a59964a26a7fb163da98d59d487da68a514af98c"
+    },
+    "bottoms-q8": {
+      "metrics": {
+        "changed_channels": 167013,
+        "total_channels": 1327104,
+        "changed_pixels": 136079,
+        "max_abs": 41.0,
+        "mae": 0.13016236858603394,
+        "rmse": 0.4239764974155116,
+        "psnr_db": 55.58396795444971
+      },
+      "native_png_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801",
+      "reference_png_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4"
+    },
+    "cardigan-upstream": {
+      "metrics": {
+        "changed_channels": 69,
+        "total_channels": 1327104,
+        "changed_pixels": 69,
+        "max_abs": 1.0,
+        "mae": 5.199291087962963e-05,
+        "rmse": 0.007210610992116385,
+        "psnr_db": 90.97136228305041
+      },
+      "native_png_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "reference_png_sha256": "574ab54cb2d92bdef468cc3c9ba308346898f4660bf29dece21646f36be78646"
+    },
+    "bottoms-upstream": {
+      "metrics": {
+        "changed_channels": 44,
+        "total_channels": 1327104,
+        "changed_pixels": 44,
+        "max_abs": 1.0,
+        "mae": 3.315489969135802e-05,
+        "rmse": 0.005758029149922569,
+        "psnr_db": 92.9253264255611
+      },
+      "native_png_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "reference_png_sha256": "0acfe49e5fac5904645c7b98473c6af99d0988bb7e7082e8ed118d43be14e1b4"
+    },
+    "bottoms-mixed-floating": {
+      "metrics": {
+        "changed_channels": 74044,
+        "total_channels": 1327104,
+        "changed_pixels": 65378,
+        "max_abs": 30.0,
+        "mae": 0.058326250241126545,
+        "rmse": 0.2895599656672289,
+        "psnr_db": 58.89603327942615
+      },
+      "native_png_sha256": "2c71c809c418c671a595b4dc75b51587efbb68583e58354d37f5e968767fc930",
+      "reference_png_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4"
+    },
+    "bottoms-mixed-q8": {
+      "metrics": {
+        "changed_channels": 149095,
+        "total_channels": 1327104,
+        "changed_pixels": 124006,
+        "max_abs": 11.0,
+        "mae": 0.11341236255787036,
+        "rmse": 0.3428698573818939,
+        "psnr_db": 57.42821747290804
+      },
+      "native_png_sha256": "2c71c809c418c671a595b4dc75b51587efbb68583e58354d37f5e968767fc930",
+      "reference_png_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801"
+    },
+    "cardigan-q8": {
+      "metrics": {
+        "changed_channels": 252503,
+        "total_channels": 1327104,
+        "changed_pixels": 175282,
+        "max_abs": 83.0,
+        "mae": 0.2586549358603395,
+        "rmse": 1.5938629945117364,
+        "psnr_db": 44.08178385825209
+      },
+      "native_png_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a",
+      "reference_png_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c"
+    },
+    "cardigan-mixed-floating": {
+      "metrics": {
+        "changed_channels": 170921,
+        "total_channels": 1327104,
+        "changed_pixels": 118827,
+        "max_abs": 82.0,
+        "mae": 0.19067759572723766,
+        "rmse": 1.5153373609421787,
+        "psnr_db": 44.52061698907283
+      },
+      "native_png_sha256": "e3bd2f91285ac1fcd84832c3b56ee5dc6b79acbf62fc37082330c42e50efa83b",
+      "reference_png_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c"
+    },
+    "cardigan-mixed-q8": {
+      "metrics": {
+        "changed_channels": 171419,
+        "total_channels": 1327104,
+        "changed_pixels": 133096,
+        "max_abs": 15.0,
+        "mae": 0.13324125313464505,
+        "rmse": 0.38445650389272473,
+        "psnr_db": 56.4338593624927
+      },
+      "native_png_sha256": "e3bd2f91285ac1fcd84832c3b56ee5dc6b79acbf62fc37082330c42e50efa83b",
+      "reference_png_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a"
+    },
+    "bottoms-recorder-control": {
+      "metrics": {
+        "changed_channels": 0,
+        "total_channels": 1327104,
+        "changed_pixels": 0,
+        "max_abs": 0.0,
+        "mae": 0.0,
+        "rmse": 0.0,
+        "psnr_db": null
+      },
+      "native_png_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "reference_png_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4"
+    }
+  },
+  "quantized_numerical_gate_accepted": false,
+  "public_quantization_promoted": false,
+  "gallery_manifest_sha256": "417d8571d6ee2f8767ae9c21c4ae5485c50de9dffb40b13287f5889363c06f2a",
+  "cardigan_mae_reduction_percent": 26.281091411225244,
+  "bottoms_mae_reduction_percent": 55.1896213362356,
+  "bottoms_wall_time_reduction_percent": {
+    "checkpoint26-q8-bottoms": 26.261179115427545,
+    "checkpoint30-mixed-top4-bottoms": 23.987476662494323
+  },
+  "floating_control_passed": true,
+  "completed": true,
+  "gallery_directory": "local-experiment\\reports\\comparison-gallery-v6",
+  "final_gallery_source_specs_sha256": {
+    "local-experiment\\reports\\gallery-v2-spec.json": "e3bf6901db576b9701b0829db0bc0acc5aee9051baf1d898e0a6fd221596f260",
+    "local-experiment\\reports\\cardigan-upstream-gallery.json": "c3b6d9681b878ded26e07633047346c3886c8e7d831e34a3fb14f0bdb697d45b",
+    "local-experiment\\reports\\bottoms-upstream-gallery.json": "43282d9f95579d9bbe3cbf83633c3936ad3d179491411e387dd92f15245270a7",
+    "local-experiment\\reports\\precision-full-images-gallery.json": "ee4b29ebaa8e1e5e60a7622ce3ff9ad72ff46d1214b7fab36d6b2186e05a64d2"
+  }
+}

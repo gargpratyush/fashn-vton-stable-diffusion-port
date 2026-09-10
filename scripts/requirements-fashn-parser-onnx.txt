@@ -1,0 +1,2 @@
+-r requirements-fashn-parser-eval.txt
+onnx==1.19.0

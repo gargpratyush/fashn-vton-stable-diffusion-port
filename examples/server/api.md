@@ -9,7 +9,8 @@ The server currently exposes three API families:
 - `sdcpp API` under `/sdcpp/v1/...`
 
 The `sdcpp API` is the native API surface.
-Its request schema is the same schema used by `sd_cpp_extra_args`.
+Its image/video request schema is the same schema used by `sd_cpp_extra_args`.
+Prepared-input FASHN try-on has a separate schema and is not a compatibility-API extension.
 
 Global LoRA rule:
 
@@ -56,6 +57,137 @@ Current endpoints include:
 - `GET /sdcpp/v1/jobs/{id}`
 - `POST /sdcpp/v1/jobs/{id}/cancel`
 - `POST /sdcpp/v1/vid_gen`
+- `POST /sdcpp/v1/try_on`
+
+### FASHN prepared-input try-on
+
+Available only with a FASHN VTON 1.5 context (currently F32 CPU, `--rng cpu`).
+Use the dedicated endpoint, not OpenAI, WebUI, or `sd_cpp_extra_args`.
+
+```json
+{
+  "inputs": {
+    "schema": "fashn-vton-prepared-v1",
+    "ca_image": "<base64 PNG>",
+    "garment_image": "<base64 PNG>",
+    "person_pose": "<base64 PNG>",
+    "garment_pose": "<base64 PNG>",
+    "category": "tops",
+    "crop": {"x": 0, "y": 0, "width": 576, "height": 864}
+  },
+  "steps": 30,
+  "cfg": 1.5,
+  "shift": 1.5,
+  "skip_cfg_last_n_steps": 1,
+  "seed": 42,
+  "sample_count": 1
+}
+```
+
+Only `inputs` is required at the top level; omitted sampling fields use the
+values shown. The crop is optional and defaults to the whole canvas.
+Unknown keys are rejected. Limits: steps 1..1000, finite nonnegative CFG,
+finite shift -20..20, skipped steps 0..steps, uint64 seed, sample count 1..4.
+Some extreme shift/step combinations collapse in F32 and produce a failed job.
+Generic generation CLI flags do not configure these defaults and are rejected
+when starting a FASHN server.
+
+Images must be exactly 576 x 864, RGB/RGB/grayscale/grayscale **8-bit PNGs**.
+No resizing, RGB pose conversion, 16-bit/HDR conversion, local file access, or
+URL fetch is performed. Strings accept padded standard base64 or the exact
+prefix `data:image/png;base64,`. Each encoded image is limited to 3 MiB including
+its URI prefix; the request limit is 12 MiB + 4 KiB. Categories are `tops`,
+`bottoms`, and `one-pieces`. An opt-in raw alternative is documented below.
+
+Accepted requests return HTTP 202 with `kind: "try_on"`, initial
+`status: "queued"`, and the existing `poll_url`. Completed jobs return
+`result.output_format: "png"` and `result.images: [{"index": 0, "b64_json": "..."}]`.
+Polling, TTL, failure, and queued cancellation use the same endpoints as
+image/video jobs. Cancelling a generating **try-on** job returns 202 and sets
+`cancellation_requested: true`; poll until terminal `cancelled`. Cancellation
+waits for the current model forward and can take over a minute on CPU.
+Accepted cancellation also wins a race with PNG encoding/completion; cancelled
+jobs publish no partial images. Repeating cancellation is idempotent (202 while
+generating, 200 after termination). Other generation modes retain their 409
+active-cancellation behavior. Malformed/unsupported inputs return 400, oversized bodies 413, and a full
+queue 429. Non-FASHN models reject this route with 400.
+
+Capabilities advertise the dedicated defaults, fixed canvas, categories and
+PNG format, without generic sampler, scheduler, LoRA, or upscaler choices.
+The existing example-server trust/authentication/CORS limitations still apply.
+Async job IDs are opaque and include a per-process random namespace; clients
+must not parse their components. Jobs are not restored after a server restart.
+An old ID returns 404 on a new server instance, rather than identifying a new
+job with a reset counter.
+
+Try-on polling additionally returns:
+
+```json
+{
+  "cancellation_requested": false,
+  "progress": {"completed_steps": 1, "total_steps": 20, "unit": "sampling_steps", "phase": "sampling"}
+}
+```
+
+Progress totals include all requested samples. `features.progress` and
+`features.cancel_generating` advertise this support. Start with
+`--type bf16 --diffusion-fa` for validated reduced matrix residency plus
+F32 computation/attention. These are context settings, not request fields.
+The standalone `/try-on` page supports prepared inputs and capability-gated raw
+uploads without external assets or frontend-submodule changes.
+
+### FASHN raw-image try-on (opt-in)
+
+The same endpoint accepts `raw_inputs` **instead of**, never alongside, `inputs`.
+Build with `SD_FASHN_PREPROCESS=ON` and start with `--try-on-dwpose-dir DIR`.
+This enables only segmentation-free/flat-lay preparation. Worn garments and
+person masking additionally require `--try-on-parser-dir DIR` and explicit
+`--accept-parser-research-license`. Parser use is limited to authorized
+non-commercial research/evaluation. No model paths or consent flags are accepted
+from HTTP clients.
+
+```json
+{
+  "raw_inputs": {
+    "person_image": "<base64 RGB PNG>",
+    "garment_image": "<base64 RGB PNG>",
+    "category": "tops",
+    "garment_photo_type": "flat-lay",
+    "segmentation_free": true
+  },
+  "steps": 20,
+  "cfg": 1.5,
+  "seed": 42
+}
+```
+
+All five raw fields are required; no other raw fields are accepted.
+Photo type is `flat-lay` or `model`. Sampling controls/defaults are identical
+to prepared mode. Raw images must decode as 8-bit three-channel RGB PNGs,
+at most 4096 in each dimension and 4,194,304 pixels each. Each encoded string,
+including a permitted PNG data-URI prefix, is at most 3 MiB. Request and queue
+limits remain unchanged. No filesystem paths, remote URLs, explicit raw crop,
+16-bit conversion, EXIF rotation, or browser resizing are supported.
+
+Native sessions are reused by the worker. Preparation occurs in memory, with
+no Python, subprocesses, downloads, or per-request files. Queues retain encoded
+raw images, not decoded pixel buffers. The preparer computes crop and model
+inputs before sampling. `progress.phase` is `queued`, `preparing`, `sampling`,
+`encoding`, or `done`. Cancellation during preparation waits for the current
+native stage; ONNX Runtime calls are not interrupted.
+
+`features.raw_image_preprocessing` and `features.raw_parser_modes` advertise
+operator-configured availability; both are also under `features_by_mode.try_on`.
+`limits.max_raw_pixels` and `limits.max_raw_dimension` declare raw dimensions,
+separately from the fixed model canvas. Unavailable modes return 400 before
+queueing. The same cancellation, terminal-error and PNG result contracts apply.
+
+FASHN contexts support cooperative SIGINT/SIGTERM shutdown (Windows
+Ctrl+Break is also handled). Queued jobs are cancelled, active work is asked
+to stop at a native boundary, and the worker is joined. A try-on request that
+reaches queue publication after shutdown begins receives 503. This does not
+make the in-memory queue durable. The standalone UI releases unavailable
+404/410 jobs and ignores stale cancellation responses belonging to an older job.
 
 ## `sd_cpp_extra_args`
 
@@ -631,6 +763,9 @@ Typical status codes:
 #### `POST /sdcpp/v1/jobs/{id}/cancel`
 
 Attempts to cancel an accepted job.
+
+Generating try-on jobs support cooperative cancellation (202); other generating
+job kinds still return 409. Queued and terminal jobs return 200.
 
 Typical status codes:
 

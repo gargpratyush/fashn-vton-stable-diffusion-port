@@ -1,6 +1,7 @@
 // Extracted from main.cpp during server refactor.
 
 #include "async_jobs.h"
+#include <random>
 
 #include <algorithm>
 #include <iomanip>
@@ -16,6 +17,8 @@ const char* async_job_kind_name(AsyncJobKind kind) {
             return "img_gen";
         case AsyncJobKind::VidGen:
             return "vid_gen";
+        case AsyncJobKind::TryOn:
+            return "try_on";
         default:
             return "img_gen";
     }
@@ -79,9 +82,54 @@ size_t count_pending_jobs(const AsyncJobManager& manager) {
     return pending;
 }
 
+static size_t try_on_image_bytes(const AsyncGenerationJob& job) {
+    size_t bytes = 0;
+    for (const auto& value : job.try_on.raw_images)
+        bytes += value.capacity();
+    for (const auto& owner : job.try_on.inputs.images) {
+        const auto image = owner.get();
+        bytes += size_t(image.width) * image.height * image.channel;
+    }
+    for (const auto& value : job.result_images_b64)
+        bytes += value.capacity();
+    return bytes;
+}
+
+size_t reserved_try_on_image_bytes(const AsyncJobManager& manager) {
+    size_t bytes = 0;
+    for (const auto& entry : manager.jobs)
+        if (entry.second->kind == AsyncJobKind::TryOn)
+            bytes += entry.second->try_on_image_charge;
+    return bytes;
+}
+
+bool reserve_try_on_images(const AsyncJobManager& manager, AsyncGenerationJob& job) {
+    const int count = job.try_on.inputs.params.sample_count;
+    if (job.kind != AsyncJobKind::TryOn || count < 1 || count > 4) {
+        LOG_ERROR("Invalid try-on image budget request");
+        return false;
+    }
+    const size_t prepared_transition = job.try_on.raw ? size_t(576) * 864 * 8 : 0;
+    const size_t needed = try_on_image_bytes(job) + prepared_transition + size_t(count) * SD_TRY_ON_RESULT_IMAGE_CAPACITY;
+    const size_t used = reserved_try_on_image_bytes(manager);
+    if (used > manager.max_try_on_image_bytes || needed > manager.max_try_on_image_bytes - used)
+        return false;
+    job.try_on_image_charge = needed;
+    return true;
+}
+
+std::string make_async_instance_id() {
+    std::random_device random;
+    std::ostringstream result;
+    result << std::hex << std::setfill('0');
+    for (int i = 0; i < 4; ++i)
+        result << std::setw(8) << static_cast<uint32_t>(random());
+    return result.str();
+}
+
 std::string make_async_job_id(AsyncJobManager& manager) {
     std::ostringstream oss;
-    oss << "job_" << std::hex << unix_timestamp_now() << "_" << std::setw(8)
+    oss << "job_" << std::hex << unix_timestamp_now() << "_" << manager.instance_id << "_" << std::setw(8)
         << std::setfill('0') << manager.next_id++;
     return oss.str();
 }
@@ -93,6 +141,7 @@ bool cancel_queued_job(AsyncJobManager& manager, AsyncGenerationJob& job) {
     }
 
     manager.queue.erase(new_end, manager.queue.end());
+    job.cancellation_requested.store(true);
     job.status       = AsyncJobStatus::Cancelled;
     job.completed_at = unix_timestamp_now();
     job.result_images_b64.clear();
@@ -102,7 +151,38 @@ bool cancel_queued_job(AsyncJobManager& manager, AsyncGenerationJob& job) {
     job.result_fps         = 0;
     job.error_code         = "cancelled";
     job.error_message      = "job cancelled by client";
+    if (job.kind == AsyncJobKind::TryOn) {
+        job.try_on.release_raw_images();
+        job.try_on = TryOnJobRequest{};
+        job.try_on_phase.store(TryOnPhase::Done);
+        job.try_on_image_charge = try_on_image_bytes(job);
+    }
     return true;
+}
+
+void stop_try_on_jobs(AsyncJobManager& manager) {
+    size_t queued = 0, active = 0;
+    {
+        std::lock_guard<std::mutex> lock(manager.mutex);
+        if (manager.stop)
+            return;
+        manager.stop = true;
+        for (auto& [id, job] : manager.jobs) {
+            if (job->kind != AsyncJobKind::TryOn)
+                continue;
+            if (job->status == AsyncJobStatus::Queued) {
+                if (cancel_queued_job(manager, *job))
+                    ++queued;
+                else
+                    LOG_ERROR("Queued try-on job missing from shutdown queue: %s", id.c_str());
+            } else if (job->status == AsyncJobStatus::Generating) {
+                job->cancellation_requested.store(true);
+                ++active;
+            }
+        }
+    }
+    LOG_INFO("Try-on shutdown requested: queued=%zu active=%zu", queued, active);
+    manager.cv.notify_all();
 }
 
 json make_async_job_json(const AsyncJobManager& manager, const AsyncGenerationJob& job) {
@@ -114,6 +194,14 @@ json make_async_job_json(const AsyncJobManager& manager, const AsyncGenerationJo
     result["started"]        = job.started_at == 0 ? json(nullptr) : json(job.started_at);
     result["completed"]      = job.completed_at == 0 ? json(nullptr) : json(job.completed_at);
     result["queue_position"] = 0;
+    if (job.kind == AsyncJobKind::TryOn) {
+        result["cancellation_requested"] = job.cancellation_requested.load();
+        result["progress"] = {{"completed_steps", job.completed_steps.load()},
+                              {"total_steps", job.total_steps},
+                              {"unit", "sampling_steps"}};
+        const char* phases[] = {"queued", "preparing", "sampling", "encoding", "done"};
+        result["progress"]["phase"] = phases[static_cast<int>(job.try_on_phase.load())];
+    }
 
     if (job.status == AsyncJobStatus::Queued) {
         size_t position = 1;
@@ -141,7 +229,7 @@ json make_async_job_json(const AsyncJobManager& manager, const AsyncGenerationJo
                 images.push_back({{"index", i}, {"b64_json", job.result_images_b64[i]}});
             }
             result["result"] = {
-                {"output_format", job.img_gen.output_format},
+                {"output_format", job.kind == AsyncJobKind::TryOn ? "png" : job.img_gen.output_format},
                 {"images", images},
             };
         }
@@ -306,6 +394,9 @@ void async_job_worker(ServerRuntime& runtime) {
             job             = it->second;
             job->status     = AsyncJobStatus::Generating;
             job->started_at = unix_timestamp_now();
+            if (job->kind == AsyncJobKind::TryOn) {
+                job->try_on_phase.store(job->try_on.raw ? TryOnPhase::Preparing : TryOnPhase::Sampling);
+            }
         }
 
         std::vector<std::string> output_images;
@@ -318,6 +409,8 @@ void async_job_worker(ServerRuntime& runtime) {
 
         if (job->kind == AsyncJobKind::ImgGen) {
             ok = execute_img_gen_job(runtime, *job, output_images, error_message);
+        } else if (job->kind == AsyncJobKind::TryOn) {
+            ok = execute_try_on_job(runtime, *job, output_images, error_message);
         } else if (job->kind == AsyncJobKind::VidGen) {
             ok = execute_vid_gen_job(runtime,
                                      *job,
@@ -338,7 +431,19 @@ void async_job_worker(ServerRuntime& runtime) {
             }
 
             job->completed_at = unix_timestamp_now();
-            if (ok) {
+            if (job->kind == AsyncJobKind::TryOn) {
+                job->try_on.release_raw_images();
+                job->try_on = TryOnJobRequest{};
+                job->try_on_phase.store(TryOnPhase::Done);
+            }
+            // Serialize cancellation acceptance and completion under the same
+            // mutex; an accepted cancellation wins even during PNG encoding.
+            if (job->kind == AsyncJobKind::TryOn && job->cancellation_requested.load()) {
+                job->status = AsyncJobStatus::Cancelled;
+                job->error_code = "cancelled";
+                job->error_message = "job cancelled by client";
+                job->result_images_b64.clear();
+            } else if (ok) {
                 job->status                 = AsyncJobStatus::Completed;
                 job->result_images_b64      = std::move(output_images);
                 job->result_media_b64       = std::move(output_media_b64);
@@ -358,6 +463,10 @@ void async_job_worker(ServerRuntime& runtime) {
                 job->result_fps         = 0;
             }
 
+            if (job->kind == AsyncJobKind::TryOn) {
+                output_images.clear();
+                job->try_on_image_charge = try_on_image_bytes(*job);
+            }
             purge_expired_jobs(manager);
         }
     }

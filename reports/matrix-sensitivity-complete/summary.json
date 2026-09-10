@@ -1,0 +1,36 @@
+{
+  "study_snapshot_sha256": "f540f6d5da2d66c54efc375310f7c6126967bcca8bb7a28d87843e6dbaf2385d",
+  "complete": true,
+  "completed_matrices": 104,
+  "total_matrices": 104,
+  "baseline_score": 0.0026250718827487396,
+  "candidate_policies": {
+    "candidate-top1.json": {
+      "evaluated_as_combination": false,
+      "matrices": [
+        "single_blocks.12.linear1.weight"
+      ],
+      "added_weight_bytes": 33689600
+    },
+    "candidate-top2.json": {
+      "evaluated_as_combination": false,
+      "matrices": [
+        "single_blocks.12.linear1.weight",
+        "single_blocks.11.linear1.weight"
+      ],
+      "added_weight_bytes": 67379200
+    },
+    "candidate-top4.json": {
+      "evaluated_as_combination": false,
+      "matrices": [
+        "single_blocks.12.linear1.weight",
+        "single_blocks.11.linear1.weight",
+        "single_blocks.8.linear1.weight",
+        "single_blocks.14.linear1.weight"
+      ],
+      "added_weight_bytes": 134758400
+    }
+  },
+  "storage_formula": "F32 minus Q8_0 payload: 4*N - 34*(N/32) bytes. Excludes alignment, metadata, graphs, activations and mapped files.",
+  "scope": "Single-matrix restoration effects on one fixed probe. Candidate combinations are unvalidated; held-out and full-image results required."
+}

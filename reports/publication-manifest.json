@@ -1,0 +1,853 @@
+{
+  "schema": "fashn-report-publication-v1",
+  "files": {
+    "reports/implementation-and-experiment-history.md": {
+      "origin": "local-experiment/reports/implementation-and-experiment-history.md",
+      "original_sha256": "3bb2f51a05d9c85d00f58b73be780820cda7c6fb45c08d7fe2a615b53c3403db",
+      "published_sha256": "3bb2f51a05d9c85d00f58b73be780820cda7c6fb45c08d7fe2a615b53c3403db",
+      "bytes": 49032,
+      "image_bytes_unchanged": null
+    },
+    "reports/quantization-and-upstream-comparison.md": {
+      "origin": "local-experiment/reports/quantization-and-upstream-comparison.md",
+      "original_sha256": "9017250a2da21681dbcc3b7d0cc2d00c565d1b1258a3e6743adc187a329d4b19",
+      "published_sha256": "9017250a2da21681dbcc3b7d0cc2d00c565d1b1258a3e6743adc187a329d4b19",
+      "bytes": 29257,
+      "image_bytes_unchanged": null
+    },
+    "reports/memory-and-latency-optimization-plan.md": {
+      "origin": "local-experiment/reports/memory-and-latency-optimization-plan.md",
+      "original_sha256": "0a20d1c9e55783d884b1064efb60b325d8b8fed56abc96c145c87960a1553c0e",
+      "published_sha256": "faa9fcd324831cb3f63784cced590efbf678382b9a5f5aba17b1ce7a2d4c09c0",
+      "bytes": 27674,
+      "image_bytes_unchanged": null
+    },
+    "reports/memory-and-latency-optimization-results.md": {
+      "origin": "local-experiment/reports/memory-and-latency-optimization-results.md",
+      "original_sha256": "0885e09b798f4b28dade9cd067b4a2e194fe1e2236aa63138d6636957eef3a4f",
+      "published_sha256": "0885e09b798f4b28dade9cd067b4a2e194fe1e2236aa63138d6636957eef3a4f",
+      "bytes": 21769,
+      "image_bytes_unchanged": null
+    },
+    "reports/fashn-vton-project-history.html": {
+      "origin": "local-experiment/reports/fashn-vton-project-history.html",
+      "original_sha256": "fd285e522a1c1f874aa5aa9cf1257f5d814172ecb81f920e3510a0d424c50d70",
+      "published_sha256": "aad5c9a1c867320b7b49f5ce3aab3b3917a9de020b98388f3010de3e2ba4fd02",
+      "bytes": 6604085,
+      "image_bytes_unchanged": null
+    },
+    "reports/full-image-precision-summary.json": {
+      "origin": "local-experiment/reports/full-image-precision-summary.json",
+      "original_sha256": "94540e546629c37dc581ae8a309851b744e2d18a851423fb95b10c0c9d2b412a",
+      "published_sha256": "2ff5e7525707d34b02c32194ecc35754f78e77c5b9ef0616a585cfd72c21a408",
+      "bytes": 19952,
+      "image_bytes_unchanged": null
+    },
+    "reports/optimization-gallery-spec.json": {
+      "origin": "local-experiment/reports/optimization-gallery-spec.json",
+      "original_sha256": "2bf7594897080f57b5a857b383308b8e8931a056869afc7fc711db013d1aa966",
+      "published_sha256": "ecb7f1442b171e634815ec08ffd90c82ebfe27de43b56862be4751271df0a32e",
+      "bytes": 8669,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint31-memory-attribution.md": {
+      "origin": "local-experiment/reports/checkpoint31-memory-attribution.md",
+      "original_sha256": "7d943cc7a97bb58ccb7dae024111743490cdb15c9fafc99b24675aaaedca744a",
+      "published_sha256": "7d943cc7a97bb58ccb7dae024111743490cdb15c9fafc99b24675aaaedca744a",
+      "bytes": 7380,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint32-runtime-ready-weights.md": {
+      "origin": "local-experiment/reports/checkpoint32-runtime-ready-weights.md",
+      "original_sha256": "4d535dc7c7457abb09b35aed85b9f12a8b7ce32bab44d90c147b781c40378891",
+      "published_sha256": "4d535dc7c7457abb09b35aed85b9f12a8b7ce32bab44d90c147b781c40378891",
+      "bytes": 7253,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint33-modulation-progress.md": {
+      "origin": "local-experiment/reports/checkpoint33-modulation-progress.md",
+      "original_sha256": "cb71791b627765508337665ff51e34aa0c3e60f527baaa21bc674e0376d58a36",
+      "published_sha256": "cb71791b627765508337665ff51e34aa0c3e60f527baaa21bc674e0376d58a36",
+      "bytes": 5951,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint34-gelu-progress.md": {
+      "origin": "local-experiment/reports/checkpoint34-gelu-progress.md",
+      "original_sha256": "2e81c264634a4e310a41f6ad2add1798d923c7d8857c319992a33665cb5aa440",
+      "published_sha256": "2e81c264634a4e310a41f6ad2add1798d923c7d8857c319992a33665cb5aa440",
+      "bytes": 8262,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint35-blas-progress.md": {
+      "origin": "local-experiment/reports/checkpoint35-blas-progress.md",
+      "original_sha256": "45a63901529ac199a91190a784a534c774b4607b9e0f46c44958602fdad0e76d",
+      "published_sha256": "45a63901529ac199a91190a784a534c774b4607b9e0f46c44958602fdad0e76d",
+      "bytes": 9834,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint36-cfg-and-reuse.md": {
+      "origin": "local-experiment/reports/checkpoint36-cfg-and-reuse.md",
+      "original_sha256": "9e33f7f4a96697e940788176d0128b7b48dd01b30b612d9129a1f940a6d5f7af",
+      "published_sha256": "9e33f7f4a96697e940788176d0128b7b48dd01b30b612d9129a1f940a6d5f7af",
+      "bytes": 4483,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint37-preparation-progress.md": {
+      "origin": "local-experiment/reports/checkpoint37-preparation-progress.md",
+      "original_sha256": "57269e8da3e0c73e84791769d84aca77c3c506ddb38c39a2e93a7588e34b1920",
+      "published_sha256": "57269e8da3e0c73e84791769d84aca77c3c506ddb38c39a2e93a7588e34b1920",
+      "bytes": 9341,
+      "image_bytes_unchanged": null
+    },
+    "reports/checkpoint38-integrated-progress.md": {
+      "origin": "local-experiment/reports/checkpoint38-integrated-progress.md",
+      "original_sha256": "f49c68db23718b115a804ac85793c4ac1d31492c3cc5d747fa5f2aed223aa311",
+      "published_sha256": "f49c68db23718b115a804ac85793c4ac1d31492c3cc5d747fa5f2aed223aa311",
+      "bytes": 4677,
+      "image_bytes_unchanged": null
+    },
+    "reports/original-integration-plan.md": {
+      "origin": "session-artifacts/fashn-vton-1.5-integration-plan.md",
+      "original_sha256": "80a0322daa917f04b374f760ef30f56a0b2720bd47fea5fc559ce40ecb50120e",
+      "published_sha256": "80a0322daa917f04b374f760ef30f56a0b2720bd47fea5fc559ce40ecb50120e",
+      "bytes": 86937,
+      "image_bytes_unchanged": null
+    },
+    "reports/licenses/FASHN-Apache-2.0.txt": {
+      "origin": "local-experiment/source/LICENSE",
+      "original_sha256": "d3d48102851b3bf5533a42571977cf7f635a6599b64b61d31ebd594fbf5f6f18",
+      "published_sha256": "d3d48102851b3bf5533a42571977cf7f635a6599b64b61d31ebd594fbf5f6f18",
+      "bytes": 11026,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/checkpoint35_controls.py.txt": {
+      "origin": "session-artifacts/checkpoint35_controls.py",
+      "original_sha256": "ceb2910b3ca546c6b29164e0f444ab5e5870cbc99fb2f6503be866587710317e",
+      "published_sha256": "ceb2910b3ca546c6b29164e0f444ab5e5870cbc99fb2f6503be866587710317e",
+      "bytes": 2998,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/checkpoint35_full_acceptance.py.txt": {
+      "origin": "session-artifacts/checkpoint35_full_acceptance.py",
+      "original_sha256": "58cc5d468a0f0ee66daeed9f9086e4665a8bbde4110a17a888cc0e72a20e2191",
+      "published_sha256": "58cc5d468a0f0ee66daeed9f9086e4665a8bbde4110a17a888cc0e72a20e2191",
+      "bytes": 4293,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/checkpoint38_integrated.py.txt": {
+      "origin": "session-artifacts/checkpoint38_integrated.py",
+      "original_sha256": "144fefcb86103439d4a7b5cdfafbf942b2bc4d2c944fb4b62254fc5c01e1b20c",
+      "published_sha256": "144fefcb86103439d4a7b5cdfafbf942b2bc4d2c944fb4b62254fc5c01e1b20c",
+      "bytes": 12242,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/finalize_fashn_optimizations.py.txt": {
+      "origin": "session-artifacts/finalize_fashn_optimizations.py",
+      "original_sha256": "e3fb6740d2865332a0fab66c4fa330716899e518f24e3202316153802afb5f23",
+      "published_sha256": "e3fb6740d2865332a0fab66c4fa330716899e518f24e3202316153802afb5f23",
+      "bytes": 8051,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/probe_openblas_memory.py.txt": {
+      "origin": "session-artifacts/probe_openblas_memory.py",
+      "original_sha256": "6e3f707aaa365b392fcf221fff695cb5af3f4db80d978c10d7da66b33c54b363",
+      "published_sha256": "6e3f707aaa365b392fcf221fff695cb5af3f4db80d978c10d7da66b33c54b363",
+      "bytes": 1670,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/build_fashn_project_history.py.txt": {
+      "origin": "session-artifacts/build_fashn_project_history.py",
+      "original_sha256": "7be8bf38b47db526f2803828b951c7b0fbf0b221299882fe8ee83405a14300b4",
+      "published_sha256": "8c1a4ec22d7a999422f87598afce10ba96df1fede27239cd985c26e245670b88",
+      "bytes": 115861,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/verify_fashn_final_artifacts.py.txt": {
+      "origin": "session-artifacts/verify_fashn_final_artifacts.py",
+      "original_sha256": "2630364515055afb0b6d36bd8c49ccd0ac98f263862cbb70b417dc48ab1b1c95",
+      "published_sha256": "2630364515055afb0b6d36bd8c49ccd0ac98f263862cbb70b417dc48ab1b1c95",
+      "bytes": 4383,
+      "image_bytes_unchanged": null
+    },
+    "reports/reproduction/verify_fashn_project_history.py.txt": {
+      "origin": "session-artifacts/verify_fashn_project_history.py",
+      "original_sha256": "7614ecd943b947fe80872bec339b9c1d6da1e7c81580db451ea5cfdbf17b15f9",
+      "published_sha256": "a36198be4389d3e81f624bfea995faebf4bf43130464562ad67e49e66b35e6d5",
+      "bytes": 6189,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-floating/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-floating/difference-x32.png",
+      "original_sha256": "8c280c0ead21f14d06c7f8b67cc52de51e42d9faf68572fa7a4d0d69c4855a9e",
+      "published_sha256": "8c280c0ead21f14d06c7f8b67cc52de51e42d9faf68572fa7a4d0d69c4855a9e",
+      "bytes": 1438,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-floating/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-floating/garment.png",
+      "original_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "published_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "bytes": 891308,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-floating/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-floating/metrics.json",
+      "original_sha256": "b00569cc5c71b0b2711e332f32309685c8fa7895355dfd3ed13c688455c2e076",
+      "published_sha256": "233c9f594cfe6dd335dc31780e396b9664e94e21944dcfdb49ffa271d7988895",
+      "bytes": 1348,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-floating/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-floating/native.png",
+      "original_sha256": "e2b99896be998047ee94a1436c6c711afc7dec28ba0740f9bf8653a3a7c9e146",
+      "published_sha256": "e2b99896be998047ee94a1436c6c711afc7dec28ba0740f9bf8653a3a7c9e146",
+      "bytes": 317820,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-floating/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-floating/person.png",
+      "original_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "published_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "bytes": 596612,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-floating/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-floating/reference.png",
+      "original_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "published_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "bytes": 317818,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-floating/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-floating/side-by-side.jpg",
+      "original_sha256": "7aa38cab248a778694b2cbaf2fcfbee625281492ffd6d470106962e05f1f6f0b",
+      "published_sha256": "7aa38cab248a778694b2cbaf2fcfbee625281492ffd6d470106962e05f1f6f0b",
+      "bytes": 119181,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-upstream/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-upstream/difference-x32.png",
+      "original_sha256": "90f9302a054f1265a26e7280f091145371f256292ebdbb2b991c44d6e9737137",
+      "published_sha256": "90f9302a054f1265a26e7280f091145371f256292ebdbb2b991c44d6e9737137",
+      "bytes": 1524,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-upstream/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-upstream/garment.png",
+      "original_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "published_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "bytes": 891308,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-upstream/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-upstream/metrics.json",
+      "original_sha256": "c02734ebc466dd6079047777b6043e9da85ccb4445b4313a78d8278fc2623a51",
+      "published_sha256": "d564a4bdde9aa70dae6c5f7214ca4afafb65bfcbd2766ae9eb89db1b1665c865",
+      "bytes": 1269,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-upstream/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-upstream/native.png",
+      "original_sha256": "e2b99896be998047ee94a1436c6c711afc7dec28ba0740f9bf8653a3a7c9e146",
+      "published_sha256": "e2b99896be998047ee94a1436c6c711afc7dec28ba0740f9bf8653a3a7c9e146",
+      "bytes": 317820,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-upstream/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-upstream/person.png",
+      "original_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "published_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "bytes": 596612,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-upstream/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-upstream/reference.png",
+      "original_sha256": "0acfe49e5fac5904645c7b98473c6af99d0988bb7e7082e8ed118d43be14e1b4",
+      "published_sha256": "0acfe49e5fac5904645c7b98473c6af99d0988bb7e7082e8ed118d43be14e1b4",
+      "bytes": 317816,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-blas-upstream/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-blas-upstream/side-by-side.jpg",
+      "original_sha256": "dc289f22d5f7d38eaff09d42ab2804c9e65bd1258e5cac073b368263d4c1a6c9",
+      "published_sha256": "dc289f22d5f7d38eaff09d42ab2804c9e65bd1258e5cac073b368263d4c1a6c9",
+      "bytes": 119008,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-floating/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-floating/difference-x32.png",
+      "original_sha256": "d3751a4ccdd435955bf45ef67b439097684b3f4bc404c0f3834cdbf8a96b9140",
+      "published_sha256": "d3751a4ccdd435955bf45ef67b439097684b3f4bc404c0f3834cdbf8a96b9140",
+      "bytes": 84699,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-floating/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-floating/garment.png",
+      "original_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "published_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "bytes": 891308,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-floating/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-floating/metrics.json",
+      "original_sha256": "ee25d20ceaf6b2648bf19354aad7dee0224f32790070b9999df1cbf1df09c8b6",
+      "published_sha256": "102ca999965b4f39f50a7a76ee77071ee90e9093ae2eb7f6a60c765535793b83",
+      "bytes": 1420,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-floating/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-floating/native.png",
+      "original_sha256": "2c71c809c418c671a595b4dc75b51587efbb68583e58354d37f5e968767fc930",
+      "published_sha256": "2c71c809c418c671a595b4dc75b51587efbb68583e58354d37f5e968767fc930",
+      "bytes": 317930,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-floating/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-floating/person.png",
+      "original_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "published_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "bytes": 596612,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-floating/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-floating/reference.png",
+      "original_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "published_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "bytes": 317818,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-floating/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-floating/side-by-side.jpg",
+      "original_sha256": "d22251d95c98e7b7f4c07a5cfc614ec5f471cd178fc6cd6a7c894e26e1464abf",
+      "published_sha256": "d22251d95c98e7b7f4c07a5cfc614ec5f471cd178fc6cd6a7c894e26e1464abf",
+      "bytes": 119412,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-q8/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-q8/difference-x32.png",
+      "original_sha256": "85a638d2e3e848887776c67632671a20f58a88f1224153c879d23a176fdfa668",
+      "published_sha256": "85a638d2e3e848887776c67632671a20f58a88f1224153c879d23a176fdfa668",
+      "bytes": 131683,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-q8/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-q8/garment.png",
+      "original_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "published_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "bytes": 891308,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-q8/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-q8/metrics.json",
+      "original_sha256": "d84ac3480a93a644c97131a77972dbe5db69e57e9d2fc6533b6458fe9b3b856c",
+      "published_sha256": "c2eb12d700a385d21ef6e7dd575e7a766d1d8e2c74421f109e84f3fb090426fb",
+      "bytes": 1367,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-q8/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-q8/native.png",
+      "original_sha256": "2c71c809c418c671a595b4dc75b51587efbb68583e58354d37f5e968767fc930",
+      "published_sha256": "2c71c809c418c671a595b4dc75b51587efbb68583e58354d37f5e968767fc930",
+      "bytes": 317930,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-q8/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-q8/person.png",
+      "original_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "published_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "bytes": 596612,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-q8/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-q8/reference.png",
+      "original_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801",
+      "published_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801",
+      "bytes": 325689,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-mixed-q8/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-mixed-q8/side-by-side.jpg",
+      "original_sha256": "a1c08f79658e4da1d0b5493c313cef456efe1d66778d676b424abcd37d8c49d2",
+      "published_sha256": "a1c08f79658e4da1d0b5493c313cef456efe1d66778d676b424abcd37d8c49d2",
+      "bytes": 119348,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-q8-floating/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-q8-floating/difference-x32.png",
+      "original_sha256": "d2598011d320d1feee2cfe23d4841a451b4f4fe79413f42fcc5642cb576f2272",
+      "published_sha256": "d2598011d320d1feee2cfe23d4841a451b4f4fe79413f42fcc5642cb576f2272",
+      "bytes": 140883,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-q8-floating/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-q8-floating/garment.png",
+      "original_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "published_sha256": "f20c6a36c11ca723c48ebbb07f85fa5d6c60e0d225d391f753bea4c75ed4cc99",
+      "bytes": 891308,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-q8-floating/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-q8-floating/metrics.json",
+      "original_sha256": "ee4b40b3720a4967d678526fee3d8b069696957964932069633c157efafb5c40",
+      "published_sha256": "c5930c445040f504117a9570ceee2ae7a673d0715d40ab105aa3255504fbd680",
+      "bytes": 1418,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/bottoms-q8-floating/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-q8-floating/native.png",
+      "original_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801",
+      "published_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801",
+      "bytes": 325689,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-q8-floating/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-q8-floating/person.png",
+      "original_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "published_sha256": "90430f0b614be8472d8a6ac63fa177497a46464dcfdc4f291fea5f9134fe5f70",
+      "bytes": 596612,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-q8-floating/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-q8-floating/reference.png",
+      "original_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "published_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "bytes": 317818,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/bottoms-q8-floating/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/bottoms-q8-floating/side-by-side.jpg",
+      "original_sha256": "52edd441c1751901d36eb9a2fb9831d1ace9796569be5009f62d62273d3b07b5",
+      "published_sha256": "52edd441c1751901d36eb9a2fb9831d1ace9796569be5009f62d62273d3b07b5",
+      "bytes": 118465,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-floating/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-floating/difference-x32.png",
+      "original_sha256": "2f223a938391ce07bbc1064127e111b68d31d447eda8da035b16c0f47c4bcfaf",
+      "published_sha256": "2f223a938391ce07bbc1064127e111b68d31d447eda8da035b16c0f47c4bcfaf",
+      "bytes": 1457,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-floating/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-floating/garment.png",
+      "original_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "published_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "bytes": 1135637,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-floating/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-floating/metrics.json",
+      "original_sha256": "d1c472cba5162c12a48c30178a0ec5f9d91eef7474664c9b47152c9a99782b4b",
+      "published_sha256": "bf9d26b7ecfdd804c0d16f69986ec882b09994f2c88c335cf6079470d6ac67e9",
+      "bytes": 1370,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-floating/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-floating/native.png",
+      "original_sha256": "4af5d7e1c077b34af61234295f8af89e753ed441bb38465c6336a0856d85ce6f",
+      "published_sha256": "4af5d7e1c077b34af61234295f8af89e753ed441bb38465c6336a0856d85ce6f",
+      "bytes": 417641,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-floating/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-floating/person.png",
+      "original_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "published_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "bytes": 648822,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-floating/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-floating/reference.png",
+      "original_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "published_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "bytes": 417635,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-floating/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-floating/side-by-side.jpg",
+      "original_sha256": "a7a352f8338f7d2d709f2125910ac81d1a01a1995acd062ab7aa817aff22c691",
+      "published_sha256": "a7a352f8338f7d2d709f2125910ac81d1a01a1995acd062ab7aa817aff22c691",
+      "bytes": 134071,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-upstream/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-upstream/difference-x32.png",
+      "original_sha256": "a809d1bd7969dd2b3662865396f3439b7916caac51b5dfd22651c2056c76b37b",
+      "published_sha256": "a809d1bd7969dd2b3662865396f3439b7916caac51b5dfd22651c2056c76b37b",
+      "bytes": 1639,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-upstream/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-upstream/garment.png",
+      "original_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "published_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "bytes": 1135637,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-upstream/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-upstream/metrics.json",
+      "original_sha256": "2d13ab82309cb1679036c5fb56dabb1d75f5a0e8960cf9f9871efbda616b529b",
+      "published_sha256": "91aac0aedfec2cf17b54458eff18b571b1a7a4e02ab9f51323c39edb59746556",
+      "bytes": 1290,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-upstream/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-upstream/native.png",
+      "original_sha256": "4af5d7e1c077b34af61234295f8af89e753ed441bb38465c6336a0856d85ce6f",
+      "published_sha256": "4af5d7e1c077b34af61234295f8af89e753ed441bb38465c6336a0856d85ce6f",
+      "bytes": 417641,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-upstream/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-upstream/person.png",
+      "original_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "published_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "bytes": 648822,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-upstream/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-upstream/reference.png",
+      "original_sha256": "574ab54cb2d92bdef468cc3c9ba308346898f4660bf29dece21646f36be78646",
+      "published_sha256": "574ab54cb2d92bdef468cc3c9ba308346898f4660bf29dece21646f36be78646",
+      "bytes": 417644,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-blas-upstream/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-blas-upstream/side-by-side.jpg",
+      "original_sha256": "a1d555268cafe50df2901a6f167d533f1b74c4ffb1fe90a177ccd27de3b03d1d",
+      "published_sha256": "a1d555268cafe50df2901a6f167d533f1b74c4ffb1fe90a177ccd27de3b03d1d",
+      "bytes": 133931,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-floating/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-floating/difference-x32.png",
+      "original_sha256": "0adfa510c227513af07bddae70b003e778fb5afa6cc4e1b4a4a97ef97a283671",
+      "published_sha256": "0adfa510c227513af07bddae70b003e778fb5afa6cc4e1b4a4a97ef97a283671",
+      "bytes": 138592,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-floating/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-floating/garment.png",
+      "original_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "published_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "bytes": 1135637,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-floating/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-floating/metrics.json",
+      "original_sha256": "f3bf2d719fb9f12d0bee33d04cb9e37ce8a50ee739837a323aea0c5d4ec7823c",
+      "published_sha256": "7184ffabb374e10ce53d8d8749583a9f9ed55560bdf210cf3215b258f88ebcb0",
+      "bytes": 1433,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-floating/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-floating/native.png",
+      "original_sha256": "e3bd2f91285ac1fcd84832c3b56ee5dc6b79acbf62fc37082330c42e50efa83b",
+      "published_sha256": "e3bd2f91285ac1fcd84832c3b56ee5dc6b79acbf62fc37082330c42e50efa83b",
+      "bytes": 417015,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-floating/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-floating/person.png",
+      "original_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "published_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "bytes": 648822,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-floating/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-floating/reference.png",
+      "original_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "published_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "bytes": 417635,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-floating/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-floating/side-by-side.jpg",
+      "original_sha256": "7dedd0b0989152b8bf58d2160191389c62bcb4e31e949144f0a3282b57191822",
+      "published_sha256": "7dedd0b0989152b8bf58d2160191389c62bcb4e31e949144f0a3282b57191822",
+      "bytes": 134339,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-q8/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-q8/difference-x32.png",
+      "original_sha256": "d0c23f214e2df5ab92645909975a16baa9f6b7f21f26003beceebbab652f2a0a",
+      "published_sha256": "d0c23f214e2df5ab92645909975a16baa9f6b7f21f26003beceebbab652f2a0a",
+      "bytes": 139468,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-q8/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-q8/garment.png",
+      "original_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "published_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "bytes": 1135637,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-q8/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-q8/metrics.json",
+      "original_sha256": "341d9769ce54ab4eb06c09bbd7f1b9e8a59276de863346bec31bcf73a2937dc7",
+      "published_sha256": "1b3d5feb52179309a8adfa5383bdd771227e8131a9b1b6f778dd7eaa6a1a08f9",
+      "bytes": 1379,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-q8/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-q8/native.png",
+      "original_sha256": "e3bd2f91285ac1fcd84832c3b56ee5dc6b79acbf62fc37082330c42e50efa83b",
+      "published_sha256": "e3bd2f91285ac1fcd84832c3b56ee5dc6b79acbf62fc37082330c42e50efa83b",
+      "bytes": 417015,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-q8/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-q8/person.png",
+      "original_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "published_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "bytes": 648822,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-q8/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-q8/reference.png",
+      "original_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a",
+      "published_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a",
+      "bytes": 422352,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-mixed-q8/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-mixed-q8/side-by-side.jpg",
+      "original_sha256": "227442f43bc9221da070bf768da0ee76b02071d8ddfe8a1339e263a627be3004",
+      "published_sha256": "227442f43bc9221da070bf768da0ee76b02071d8ddfe8a1339e263a627be3004",
+      "bytes": 134283,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-q8-floating/difference-x32.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-q8-floating/difference-x32.png",
+      "original_sha256": "1db045ef0e79c20fb726403d18577b4cbd4bd4c2f89126d399cce4d33b1de718",
+      "published_sha256": "1db045ef0e79c20fb726403d18577b4cbd4bd4c2f89126d399cce4d33b1de718",
+      "bytes": 178692,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-q8-floating/garment.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-q8-floating/garment.png",
+      "original_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "published_sha256": "d4bb508a3878125716139de8087dee1a4aad716f1a2c43d574a337c233da1dc3",
+      "bytes": 1135637,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-q8-floating/metrics.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-q8-floating/metrics.json",
+      "original_sha256": "b6fd2739c4d6ff11bf25e383a88bef644738605489ee04ac1f8807a12280804b",
+      "published_sha256": "9f9064ca165f87d733562702a093f3c838697da1cfb9f39b14141706b375bd4b",
+      "bytes": 1429,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/cardigan-q8-floating/native.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-q8-floating/native.png",
+      "original_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a",
+      "published_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a",
+      "bytes": 422352,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-q8-floating/person.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-q8-floating/person.png",
+      "original_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "published_sha256": "83231b55be4fd789567e7f6e8b1a9ecd5fdf8643dd49c6b8df14ff70692b88e8",
+      "bytes": 648822,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-q8-floating/reference.png": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-q8-floating/reference.png",
+      "original_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "published_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "bytes": 417635,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/cardigan-q8-floating/side-by-side.jpg": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/cardigan-q8-floating/side-by-side.jpg",
+      "original_sha256": "4ec13a92a87fbf66297a4c64a67664ac3d099c4fca556de5eb287bd29368c45d",
+      "published_sha256": "4ec13a92a87fbf66297a4c64a67664ac3d099c4fca556de5eb287bd29368c45d",
+      "bytes": 133349,
+      "image_bytes_unchanged": true
+    },
+    "reports/comparison-gallery-optimized/index.html": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/index.html",
+      "original_sha256": "b5e95b63fc4301de2770d2d13afff87c073bdb004cfa5b3ade5bf099db51fe44",
+      "published_sha256": "23714099ce4202d9e202a1858143710c16ada3de291ec892f0d7e525f2260078",
+      "bytes": 14431,
+      "image_bytes_unchanged": null
+    },
+    "reports/comparison-gallery-optimized/manifest.json": {
+      "origin": "local-experiment/reports/comparison-gallery-optimized/manifest.json",
+      "original_sha256": "bb92584cf767d88f3385309df97484cf82d42e1829c24c7d4d40f847377773d1",
+      "published_sha256": "1d8af4f321e887cbbaf438f097f33a77e1173c0b013e3f040eb5306ba9ef7113",
+      "bytes": 15860,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/candidate-branch-pair.json": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/candidate-branch-pair.json",
+      "original_sha256": "50c71c8346d18d0922301e7d958fcbaef85aaa21ddc011a5902211b8ed570209",
+      "published_sha256": "da82f88f2ed69d6db3a360fad697b487c16a53d180f02b463c44dbe592f8b13c",
+      "bytes": 105,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/candidate-top1.json": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/candidate-top1.json",
+      "original_sha256": "2b5b3e66787b6f906d53c0a124be8417425f991d66cadce0bcfdbf6d65965829",
+      "published_sha256": "a34aeb0780d9aff480061578f3907972046c3a4762b2b16627c3a3ce01cf969d",
+      "bytes": 66,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/candidate-top2.json": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/candidate-top2.json",
+      "original_sha256": "d43e1bad0e766f8a87f48ed3b0f5bba5af90bf0a520753f1a4f3f9ec52fdf105",
+      "published_sha256": "91cbb9753fa0374af7961b2735477a8eccf95c2b25efb8a13935b0c8fab45b04",
+      "bytes": 105,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/candidate-top4.json": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/candidate-top4.json",
+      "original_sha256": "b233b25b08422de16feef72442250469d01ab80533e2858504e10767aabf59b3",
+      "published_sha256": "ea1af0ea0b240729056be6e667706881e78a2610c5d7dc38078bf4d962212ce0",
+      "bytes": 182,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/ranking.csv": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/ranking.csv",
+      "original_sha256": "4d663cb94f83c8d0dc1365916274310c69dca06cb009cf9a7010ebc65125a659",
+      "published_sha256": "4d663cb94f83c8d0dc1365916274310c69dca06cb009cf9a7010ebc65125a659",
+      "bytes": 19526,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/ranking.md": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/ranking.md",
+      "original_sha256": "3c259fd1b127c7bc385ae4b54ec367756e9d873545061d5054c700b85b0ed851",
+      "published_sha256": "3c259fd1b127c7bc385ae4b54ec367756e9d873545061d5054c700b85b0ed851",
+      "bytes": 9121,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/study-snapshot.json": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/study-snapshot.json",
+      "original_sha256": "f540f6d5da2d66c54efc375310f7c6126967bcca8bb7a28d87843e6dbaf2385d",
+      "published_sha256": "74c53b6d8d530affc503ef855e5bd8a76b0bbde8df6a56ac38c22831672ca278",
+      "bytes": 263346,
+      "image_bytes_unchanged": null
+    },
+    "reports/matrix-sensitivity-complete/summary.json": {
+      "origin": "local-experiment/reports/matrix-sensitivity-complete/summary.json",
+      "original_sha256": "de9701754cf982851bac3466c09c9d01c22eaa080adcaeb738b1b55dedfc52b9",
+      "published_sha256": "dec5441dbddf82823c1a9bcf7520317a97e40c995510744413f257d15b68cc2b",
+      "bytes": 1261,
+      "image_bytes_unchanged": null
+    },
+    "reports/evidence/checkpoint38-integrated/results.json": {
+      "origin": "local-experiment/checkpoint38-integrated/results.json",
+      "original_sha256": "4fb8ed698bae335cbd0e783eb4538907648e35dbe8dd6a1347c843a796ec152d",
+      "published_sha256": "9b17ada4ae881f7e9b8ddfe196ebe60d9ccd9e2163e12082edf8f87824324ba6",
+      "bytes": 202041,
+      "image_bytes_unchanged": null
+    },
+    "reports/evidence/checkpoint38-integrated/final-summary.json": {
+      "origin": "local-experiment/checkpoint38-integrated/final-summary.json",
+      "original_sha256": "22c81149404b42e9423dbe65174cb33f699ca38ff6dcf15571a8823b838872ad",
+      "published_sha256": "f1acbd6258fdc9f24629328ab87f5f8016f432e1ec28c1027f9529d3eac05292",
+      "bytes": 114032,
+      "image_bytes_unchanged": null
+    },
+    "reports/evidence/checkpoint38-integrated/openblas-dll-memory.json": {
+      "origin": "local-experiment/checkpoint38-integrated/openblas-dll-memory.json",
+      "original_sha256": "437552f058e60478eea286a97cabba052046b1534ad472d354d901c3afc7b8b1",
+      "published_sha256": "08f327e79c80b510a063cd72fd5e8fb2ffaa41edf04f0832545f4b05556c60e3",
+      "bytes": 1594,
+      "image_bytes_unchanged": null
+    },
+    "reports/evidence/checkpoint35-full-acceptance/results.json": {
+      "origin": "local-experiment/checkpoint35-full-acceptance/results.json",
+      "original_sha256": "31d2bbc1d56972c796f7235d774348c3d3d9aab25390c7647f38faa928e91e79",
+      "published_sha256": "0b05e9e47d1c1c47839385c265792533cb6820ef194fb672201b351ef1e01825",
+      "bytes": 48195,
+      "image_bytes_unchanged": null
+    },
+    "reports/evidence/checkpoint37-server-budget-soak/report.json": {
+      "origin": "local-experiment/checkpoint37-server-budget-soak/report.json",
+      "original_sha256": "3e1b4a2aeedd19df2b224b4a24638d9516762d23f1c32c1e4f0e823a51ae6e6b",
+      "published_sha256": "da47b2ea1f3f9fc195961a8089f3b14a6993b74b2bb15b6ed8f0fe750bd35eed",
+      "bytes": 1653,
+      "image_bytes_unchanged": null
+    },
+    "reports/evidence/checkpoint37-ort-comparison.json": {
+      "origin": "local-experiment/checkpoint37-ort-comparison.json",
+      "original_sha256": "88f294baa118a47559eab13171341b1cd63795b4e382dbaaa356cc11b088e2da",
+      "published_sha256": "4092f6f6d0fc5b84badc12c67ac8021614e984c762e779de17f5fc99e1213bd4",
+      "bytes": 15944,
+      "image_bytes_unchanged": null
+    },
+    "reports/evidence/checkpoint29-policy-evaluation/evaluation.json": {
+      "origin": "local-experiment/checkpoint29-policy-evaluation/evaluation.json",
+      "original_sha256": "cdf9e74291728ddf348bfc7a56208c00a18a46a3197b3bed1340ff3434db950b",
+      "published_sha256": "881fa18bb5012011a85a55915d707984266d936fbd8cc411a8fc1a09d7230873",
+      "bytes": 31774,
+      "image_bytes_unchanged": null
+    }
+  },
+  "scope": "Selected reports, rendered images and numeric summaries; no weights, binaries or full trajectory tensors.",
+  "path_labels": {
+    "repository": "This source checkout",
+    "local-experiment": "Original experiment tree, not bundled",
+    "<USER_HOME>": "Redacted historical home-directory prefix"
+  },
+  "omitted_local_links": [
+    "8|11|12|14",
+    "SiLU(vec",
+    "file:///local-experiment/checkpoint10-manual-baseline",
+    "file:///local-experiment/checkpoint12-photo-20-step/benchmark.json",
+    "file:///local-experiment/checkpoint12-photo-20-step/sample-0.png",
+    "file:///local-experiment/checkpoint13-active-jobs",
+    "file:///local-experiment/checkpoint14-ui-routes",
+    "file:///local-experiment/checkpoint15-native-final",
+    "file:///local-experiment/checkpoint15-native-regression",
+    "file:///local-experiment/checkpoint16-conversion",
+    "file:///local-experiment/checkpoint17-installed-preparer",
+    "file:///local-experiment/checkpoint17-raw-server",
+    "file:///local-experiment/checkpoint17-shared-preparer",
+    "file:///local-experiment/checkpoint18-browser",
+    "file:///local-experiment/checkpoint19-backend-step0",
+    "file:///local-experiment/checkpoint19-backend-step15",
+    "file:///local-experiment/checkpoint20-installed-prepared",
+    "file:///local-experiment/checkpoint20-no-sdk-clean-path",
+    "file:///local-experiment/checkpoint20-no-sdk-server",
+    "file:///local-experiment/checkpoint21-native-20-step",
+    "file:///local-experiment/checkpoint21-native-20-step-t16",
+    "file:///local-experiment/checkpoint21-reference-20-step",
+    "file:///local-experiment/checkpoint22-quality-reference-preparation",
+    "file:///local-experiment/checkpoint22-quality-t16/flat-dress-free-review.jpg",
+    "file:///local-experiment/checkpoint22-quality-t16/flat-top-free-review.jpg",
+    "file:///local-experiment/checkpoint22-quality-t16/flat-top-masked-review.jpg",
+    "file:///local-experiment/checkpoint22-quality-t16/flat-top-seed43-review.jpg",
+    "file:///local-experiment/checkpoint22-quality-t16/suite.json",
+    "file:///local-experiment/checkpoint22-quality-t16/visual-review.json",
+    "file:///local-experiment/checkpoint22-quality-t16/worn-bottoms-free-review.jpg",
+    "file:///local-experiment/checkpoint22-quality-t16/worn-top-free-review.jpg",
+    "file:///local-experiment/checkpoint25-bottoms-comparison",
+    "file:///local-experiment/checkpoint25-bottoms-reference",
+    "file:///local-experiment/checkpoint26-bf16-bottoms-control",
+    "file:///local-experiment/checkpoint26-q8-bottoms",
+    "file:///local-experiment/checkpoint26-q8-cardigan",
+    "file:///local-experiment/checkpoint27-bottoms-comparison",
+    "file:///local-experiment/checkpoint27-cardigan-comparison-v2",
+    "file:///local-experiment/checkpoint27-upstream-cardigan",
+    "file:///local-experiment/checkpoint28-matrix-ablation",
+    "file:///local-experiment/checkpoint29-policy-evaluation",
+    "file:///local-experiment/checkpoint30-mixed-top4-bottoms",
+    "file:///local-experiment/checkpoint30-mixed-top4-cardigan",
+    "file:///local-experiment/native-graph-f32-gelu",
+    "file:///local-experiment/native-graph-step15",
+    "file:///local-experiment/native-try-on-two-step.png",
+    "file:///local-experiment/oracle-step0",
+    "file:///local-experiment/oracle-step0-replay",
+    "file:///local-experiment/oracle-step15",
+    "file:///local-experiment/parser-checkpoint9",
+    "file:///local-experiment/parser-checkpoint9/native-two-step.png",
+    "file:///local-experiment/reports/checkpoint31-load-summary/summary.json",
+    "file:///local-experiment/reports/comparison-gallery-v6/cardigan-upstream/side-by-side.jpg",
+    "file:///local-experiment/server-checkpoint8-final",
+    "file:///repository/outputs/smoke-test.log",
+    "file:///repository/outputs/smoke-test.png"
+  ]
+}

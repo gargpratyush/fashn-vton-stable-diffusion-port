@@ -1,0 +1,9 @@
+# Development-only CPU oracle; not dependencies of the native library.
+# Install with --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.8.0+cpu
+torchvision==0.23.0+cpu
+einops==0.8.1
+safetensors==0.6.2
+numpy==2.2.6
+pillow==11.3.0
+packaging==25.0

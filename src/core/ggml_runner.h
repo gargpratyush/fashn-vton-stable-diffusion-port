@@ -68,6 +68,11 @@ struct GGMLRunnerContext {
     ggml_backend_t backend                                           = nullptr;
     ggml_context* ggml_ctx                                           = nullptr;
     bool flash_attn_enabled                                          = false;
+    bool full_precision_gelu                                         = false;
+    bool fused_full_precision_gelu                                   = false;
+    bool full_precision_linear_weights                               = false;
+    bool flash_attn_f32_kv                                           = false;
+    ggml_backend_dev_t attention_fallback_device                     = nullptr;
     bool conv2d_direct_enabled                                       = false;
     bool circular_x_enabled                                          = false;
     bool circular_y_enabled                                          = false;
@@ -258,6 +263,24 @@ protected:
     bool assign_graph_cut_layer_split_backends(ggml_cgraph* gf);
 
 public:
+    // Observers must not throw, including during runner_end().
+    std::function<void(const char*, ggml_cgraph*, int)> diagnostic_observer;
+    void diagnostic_event(const char* phase, ggml_cgraph* graph = nullptr, int threads = 0) {
+        if (diagnostic_observer)
+            diagnostic_observer(phase, graph, threads);
+    }
+    size_t diagnostic_runtime_bytes() const { return retained_runtime_buffer_bytes(); }
+    std::map<std::string, size_t> diagnostic_workspace_bytes() const {
+        std::map<std::string, size_t> result;
+        result[ggml_backend_name(runtime_backend)] = workspace_.bytes(runtime_backend);
+        for (auto backend : extra_runtime_backends)
+            result[ggml_backend_name(backend)] += workspace_.bytes(backend);
+        if (auto cpu = workspace_.cpu_backend())
+            result[ggml_backend_name(cpu)] += workspace_.bytes(cpu);
+        // The GGML allocator reports shared buffer capacity only for its first backend.
+        return result;
+    }
+
     bool runner_start();
 
     bool runner_started() const { return runner_started_; }

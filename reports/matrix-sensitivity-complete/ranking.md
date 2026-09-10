@@ -1,0 +1,114 @@
+# Matrix restoration sensitivity
+
+Completed 104/104 matrices; baseline score 0.002625071883.
+
+Single-matrix restoration effects on one fixed probe. Candidate combinations are unvalidated; held-out and full-image results required.
+
+F32 minus Q8_0 payload: 4*N - 34*(N/32) bytes. Excludes alignment, metadata, graphs, activations and mapped files.
+
+| Rank | Restored matrix | Worst-branch velocity L2 | Error reduction | Added weight MiB |
+|---|---|---:|---:|---:|
+| 1 | `single_blocks.12.linear1.weight` | 0.001557426038 | +40.67111% | 32.129 |
+| 2 | `single_blocks.11.linear1.weight` | 0.002547629102 | +2.95012% | 32.129 |
+| 3 | `single_blocks.8.linear1.weight` | 0.002548950284 | +2.89979% | 32.129 |
+| 4 | `single_blocks.14.linear1.weight` | 0.002569811531 | +2.10510% | 32.129 |
+| 5 | `single_blocks.15.linear2.weight` | 0.002578119842 | +1.78860% | 22.949 |
+| 6 | `single_blocks.14.linear2.weight` | 0.00259235255 | +1.24642% | 22.949 |
+| 7 | `single_blocks.9.linear1.weight` | 0.002607190705 | +0.68117% | 32.129 |
+| 8 | `single_blocks.5.linear1.weight` | 0.002612368628 | +0.48392% | 32.129 |
+| 9 | `single_blocks.12.linear2.weight` | 0.002613552534 | +0.43882% | 22.949 |
+| 10 | `single_blocks.8.linear2.weight` | 0.002614494526 | +0.40294% | 22.949 |
+| 11 | `single_blocks.3.linear1.weight` | 0.002615836823 | +0.35180% | 32.129 |
+| 12 | `single_blocks.10.linear1.weight` | 0.002616049993 | +0.34368% | 32.129 |
+| 13 | `single_blocks.7.linear2.weight` | 0.002618034251 | +0.26809% | 22.949 |
+| 14 | `single_blocks.15.linear1.weight` | 0.002618420444 | +0.25338% | 32.129 |
+| 15 | `double_blocks.7.img_mlp.0.weight` | 0.002619101698 | +0.22743% | 18.359 |
+| 16 | `single_blocks.1.linear2.weight` | 0.002619237663 | +0.22225% | 22.949 |
+| 17 | `double_blocks.6.txt_attn.qkv.weight` | 0.002619392651 | +0.21635% | 13.770 |
+| 18 | `single_blocks.6.linear1.weight` | 0.00262010782 | +0.18910% | 32.129 |
+| 19 | `double_blocks.4.img_mlp.0.weight` | 0.002620557033 | +0.17199% | 18.359 |
+| 20 | `double_blocks.0.img_mlp.2.weight` | 0.002620602713 | +0.17025% | 18.359 |
+| 21 | `single_blocks.6.linear2.weight` | 0.002620635053 | +0.16902% | 22.949 |
+| 22 | `single_blocks.2.linear2.weight` | 0.002621524699 | +0.13513% | 22.949 |
+| 23 | `double_blocks.7.img_attn.qkv.weight` | 0.002621861309 | +0.12230% | 13.770 |
+| 24 | `single_blocks.4.linear1.weight` | 0.002622269656 | +0.10675% | 32.129 |
+| 25 | `single_blocks.11.linear2.weight` | 0.002622406448 | +0.10154% | 22.949 |
+| 26 | `double_blocks.0.txt_mlp.0.weight` | 0.002622445596 | +0.10005% | 18.359 |
+| 27 | `double_blocks.3.txt_mlp.0.weight` | 0.002622453549 | +0.09974% | 18.359 |
+| 28 | `single_blocks.10.linear2.weight` | 0.002622501111 | +0.09793% | 22.949 |
+| 29 | `double_blocks.5.txt_attn.qkv.weight` | 0.002622601903 | +0.09409% | 13.770 |
+| 30 | `single_blocks.2.linear1.weight` | 0.002622679766 | +0.09113% | 32.129 |
+| 31 | `single_blocks.13.linear1.weight` | 0.002623040896 | +0.07737% | 32.129 |
+| 32 | `double_blocks.6.txt_mlp.0.weight` | 0.002623051988 | +0.07695% | 18.359 |
+| 33 | `single_blocks.4.linear2.weight` | 0.002623059168 | +0.07667% | 22.949 |
+| 34 | `single_blocks.0.linear1.weight` | 0.002623068254 | +0.07633% | 32.129 |
+| 35 | `double_blocks.4.txt_mlp.0.weight` | 0.002623178265 | +0.07214% | 18.359 |
+| 36 | `double_blocks.1.img_mlp.2.weight` | 0.002623184237 | +0.07191% | 18.359 |
+| 37 | `double_blocks.5.img_mlp.2.weight` | 0.002623206542 | +0.07106% | 18.359 |
+| 38 | `double_blocks.7.txt_mlp.0.weight` | 0.002623381547 | +0.06439% | 18.359 |
+| 39 | `single_blocks.13.linear2.weight` | 0.002623426862 | +0.06267% | 22.949 |
+| 40 | `double_blocks.1.txt_mlp.2.weight` | 0.002623604425 | +0.05590% | 18.359 |
+| 41 | `single_blocks.3.linear2.weight` | 0.002623615001 | +0.05550% | 22.949 |
+| 42 | `double_blocks.3.txt_mlp.2.weight` | 0.002623748139 | +0.05043% | 18.359 |
+| 43 | `x_patch_mixer.3.linear1.weight` | 0.002623917327 | +0.04398% | 32.129 |
+| 44 | `double_blocks.4.img_mlp.2.weight` | 0.00262398174 | +0.04153% | 18.359 |
+| 45 | `single_blocks.7.linear1.weight` | 0.002624117417 | +0.03636% | 32.129 |
+| 46 | `double_blocks.5.txt_mlp.2.weight` | 0.002624229113 | +0.03210% | 18.359 |
+| 47 | `single_blocks.0.linear2.weight` | 0.002624304392 | +0.02924% | 22.949 |
+| 48 | `double_blocks.6.img_mlp.2.weight` | 0.00262430799 | +0.02910% | 18.359 |
+| 49 | `double_blocks.5.img_mlp.0.weight` | 0.002624399145 | +0.02563% | 18.359 |
+| 50 | `double_blocks.5.img_attn.qkv.weight` | 0.002624420683 | +0.02481% | 13.770 |
+| 51 | `double_blocks.7.txt_mlp.2.weight` | 0.002624423945 | +0.02468% | 18.359 |
+| 52 | `x_patch_mixer.3.linear2.weight` | 0.002624431034 | +0.02441% | 22.949 |
+| 53 | `double_blocks.0.txt_attn.proj.weight` | 0.002624575568 | +0.01891% | 4.590 |
+| 54 | `double_blocks.2.txt_mlp.0.weight` | 0.002624584612 | +0.01856% | 18.359 |
+| 55 | `double_blocks.2.img_mlp.2.weight` | 0.002624660345 | +0.01568% | 18.359 |
+| 56 | `double_blocks.4.img_attn.proj.weight` | 0.002625302744 | -0.00879% | 4.590 |
+| 57 | `single_blocks.9.linear2.weight` | 0.002625548934 | -0.01817% | 22.949 |
+| 58 | `double_blocks.4.txt_attn.proj.weight` | 0.002625633412 | -0.02139% | 4.590 |
+| 59 | `double_blocks.4.txt_mlp.2.weight` | 0.0026257727 | -0.02670% | 18.359 |
+| 60 | `double_blocks.0.img_attn.qkv.weight` | 0.002625834263 | -0.02904% | 13.770 |
+| 61 | `double_blocks.7.img_mlp.2.weight` | 0.002625933483 | -0.03282% | 18.359 |
+| 62 | `double_blocks.3.img_attn.qkv.weight` | 0.002625992083 | -0.03505% | 13.770 |
+| 63 | `double_blocks.7.img_attn.proj.weight` | 0.002625996696 | -0.03523% | 4.590 |
+| 64 | `double_blocks.6.img_attn.proj.weight` | 0.002626169318 | -0.04181% | 4.590 |
+| 65 | `x_patch_mixer.0.linear1.weight` | 0.002626229354 | -0.04409% | 32.129 |
+| 66 | `double_blocks.2.img_attn.qkv.weight` | 0.002626305716 | -0.04700% | 13.770 |
+| 67 | `double_blocks.2.img_attn.proj.weight` | 0.002626357569 | -0.04898% | 4.590 |
+| 68 | `double_blocks.7.txt_attn.qkv.weight` | 0.002626527225 | -0.05544% | 13.770 |
+| 69 | `double_blocks.5.img_attn.proj.weight` | 0.002626757449 | -0.06421% | 4.590 |
+| 70 | `single_blocks.1.linear1.weight` | 0.002626794718 | -0.06563% | 32.129 |
+| 71 | `double_blocks.1.img_mlp.0.weight` | 0.002627051344 | -0.07541% | 18.359 |
+| 72 | `double_blocks.1.img_attn.qkv.weight` | 0.002627494294 | -0.09228% | 13.770 |
+| 73 | `double_blocks.6.img_attn.qkv.weight` | 0.002627527358 | -0.09354% | 13.770 |
+| 74 | `double_blocks.6.txt_mlp.2.weight` | 0.00262766658 | -0.09884% | 18.359 |
+| 75 | `double_blocks.2.img_mlp.0.weight` | 0.002628032905 | -0.11280% | 18.359 |
+| 76 | `double_blocks.4.img_attn.qkv.weight` | 0.002628365145 | -0.12545% | 13.770 |
+| 77 | `double_blocks.3.txt_attn.qkv.weight` | 0.002628367031 | -0.12553% | 13.770 |
+| 78 | `single_blocks.5.linear2.weight` | 0.002628391591 | -0.12646% | 22.949 |
+| 79 | `double_blocks.3.img_attn.proj.weight` | 0.002628405069 | -0.12698% | 4.590 |
+| 80 | `double_blocks.6.img_mlp.0.weight` | 0.002628568882 | -0.13322% | 18.359 |
+| 81 | `double_blocks.3.img_mlp.0.weight` | 0.002628691987 | -0.13790% | 18.359 |
+| 82 | `double_blocks.2.txt_attn.qkv.weight` | 0.002628738277 | -0.13967% | 13.770 |
+| 83 | `double_blocks.2.txt_attn.proj.weight` | 0.002628869848 | -0.14468% | 4.590 |
+| 84 | `double_blocks.1.img_attn.proj.weight` | 0.002628914821 | -0.14639% | 4.590 |
+| 85 | `double_blocks.4.txt_attn.qkv.weight` | 0.002629316473 | -0.16169% | 13.770 |
+| 86 | `x_patch_mixer.2.linear2.weight` | 0.002629414757 | -0.16544% | 22.949 |
+| 87 | `double_blocks.7.txt_attn.proj.weight` | 0.002629506714 | -0.16894% | 4.590 |
+| 88 | `double_blocks.6.txt_attn.proj.weight` | 0.002630302265 | -0.19925% | 4.590 |
+| 89 | `x_patch_mixer.2.linear1.weight` | 0.002630676926 | -0.21352% | 32.129 |
+| 90 | `double_blocks.3.txt_attn.proj.weight` | 0.002630959314 | -0.22428% | 4.590 |
+| 91 | `double_blocks.5.txt_mlp.0.weight` | 0.002631070173 | -0.22850% | 18.359 |
+| 92 | `double_blocks.0.txt_mlp.2.weight` | 0.002631219117 | -0.23417% | 18.359 |
+| 93 | `double_blocks.1.txt_attn.proj.weight` | 0.002631701512 | -0.25255% | 4.590 |
+| 94 | `x_patch_mixer.1.linear2.weight` | 0.002632130366 | -0.26889% | 22.949 |
+| 95 | `double_blocks.3.img_mlp.2.weight` | 0.00263226684 | -0.27409% | 18.359 |
+| 96 | `double_blocks.0.img_attn.proj.weight` | 0.00263258513 | -0.28621% | 4.590 |
+| 97 | `x_patch_mixer.1.linear1.weight` | 0.002632641361 | -0.28835% | 32.129 |
+| 98 | `double_blocks.2.txt_mlp.2.weight` | 0.002632923114 | -0.29909% | 18.359 |
+| 99 | `x_patch_mixer.0.linear2.weight` | 0.002632993252 | -0.30176% | 22.949 |
+| 100 | `double_blocks.5.txt_attn.proj.weight` | 0.002633362498 | -0.31582% | 4.590 |
+| 101 | `double_blocks.1.txt_mlp.0.weight` | 0.002635877907 | -0.41165% | 18.359 |
+| 102 | `double_blocks.0.txt_attn.qkv.weight` | 0.002636667115 | -0.44171% | 13.770 |
+| 103 | `double_blocks.0.img_mlp.0.weight` | 0.002636766249 | -0.44549% | 18.359 |
+| 104 | `double_blocks.1.txt_attn.qkv.weight` | 0.002637839723 | -0.48638% | 13.770 |

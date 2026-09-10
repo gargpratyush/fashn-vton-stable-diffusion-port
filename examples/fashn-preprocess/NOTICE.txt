@@ -1,0 +1,21 @@
+Native FASHN preparation
+
+This implementation follows the algorithms and model conventions in:
+- FASHN AI / fashn-vton-1.5, revision 7c0f10af3f91ad4048fe9729c470a13ef905d25a
+  https://github.com/fashn-AI/fashn-vton-1.5 (Apache-2.0)
+- IDEA-Research / DWPose (Apache-2.0)
+  https://github.com/IDEA-Research/DWPose
+- Megvii-BaseDetection / YOLOX (Apache-2.0)
+  https://github.com/Megvii-BaseDetection/YOLOX
+- OpenMMLab / MMPose (Apache-2.0)
+  https://github.com/open-mmlab/mmpose
+
+OpenCV and ONNX Runtime are optional external dependencies; retain their
+licenses and third-party notices when distributing their binaries.
+This component does not include any model weights.
+
+The optional fashn-human-parser model inherits NVIDIA SegFormer's separate
+non-commercial research/evaluation-only license. It is NOT covered by the
+permissive licenses above. Native use requires a separately exported local
+model with its LICENSE and explicit research/evaluation consent. Do not
+redistribute it as an unrestricted or production/commercial preprocessor.

@@ -491,6 +491,7 @@ void GGMLRunner::runner_end() {
         manager->remove_runtime_owner(reinterpret_cast<uintptr_t>(this));
     }
     runner_started_ = false;
+    diagnostic_event("runner_workspace_released");
 }
 
 GGMLRunner::GGMLRunner(ggml_backend_t backend,
@@ -617,9 +618,11 @@ std::optional<sd::Tensor<float>> GGMLRunner::compute(get_graph_cb_t get_graph,
     } graph_guard{*this, success};
 
     ggml_cgraph* graph = nullptr;
+    diagnostic_event("graph_build_begin", nullptr, n_threads);
     if (!prepare_compute_graph(get_graph, &graph)) {
         return std::nullopt;
     }
+    diagnostic_event("graph_build_end", graph, n_threads);
     rebuild_params_tensor_set();
     auto output = execute_graph(graph, n_threads, no_return, read_outputs);
     success     = output.has_value();
@@ -901,6 +904,7 @@ std::optional<Tensor<float>> GGMLRunner::execute_graph(ggml_cgraph* graph, int n
             })) {
             return fail_segment("workspace allocation");
         }
+        diagnostic_event("graph_workspace_allocated", segment_graph, n_threads);
         for (const auto& size : measurement.buffers) {
             track_compute_buffer(size.backend);
         }
@@ -917,11 +921,13 @@ std::optional<Tensor<float>> GGMLRunner::execute_graph(ggml_cgraph* graph, int n
         }
         LOG_DEBUG("%s executing segment %zu/%zu: %s", get_desc().c_str(),
                   index + 1, plan.segments.size(), segment.group_name.c_str());
+        diagnostic_event("graph_execute_begin", segment_graph, n_threads);
         if (!execute_segment(segment_graph, n_threads) ||
             !cache_.capture(segment_graph) ||
             !cut_cache_.capture(graph, segment, get_desc().c_str())) {
             return fail_segment("execution or output caching");
         }
+        diagnostic_event("graph_execute_end", segment_graph, n_threads);
         sync_runtime_residency();
         if (last) {
             if (read_outputs && !read_outputs()) {
@@ -933,6 +939,7 @@ std::optional<Tensor<float>> GGMLRunner::execute_graph(ggml_cgraph* graph, int n
                 if (!output.has_value()) {
                     return fail_segment("output readback");
                 }
+                diagnostic_event("graph_output_read", segment_graph, n_threads);
             }
         }
         // Final outputs and their callbacks may still be views of consumed cuts.

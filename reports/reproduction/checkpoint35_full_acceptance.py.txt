@@ -1,0 +1,66 @@
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from PIL import Image, ImageDraw
+
+ROOT = Path(r"C:\source\fashn-vton-reference")
+REPO = Path(r"C:\source\stable-diffusion.cpp")
+sys.path.insert(0, str(REPO / "scripts"))
+from benchmark_fashn_vton import measure_command
+from compare_fashn_trajectories import compare
+from export_fashn_vton_reference import sha256
+
+controls = json.loads((ROOT / r"checkpoint35-forward-controls\results.json").read_text(encoding="utf-8"))
+if not controls["passed"] or controls["warm_medians"]["blas"] >= controls["warm_medians"]["cpu"]:
+    raise RuntimeError("Clean BLAS controls are incomplete, incorrect or not faster")
+exe = REPO / r"build\cpu-blas\bin\Release\test-fashn-vton-trajectory.exe"
+model = ROOT / r"checkpoint32-runtime-weights\bf16\model.gguf"
+output = ROOT / "checkpoint35-full-acceptance"
+output.mkdir(exist_ok=False)
+provenance = [exe, model, Path(r"C:\source\fashn-native-deps\openblas-0.3.34\package\bin\libopenblas.dll")]
+report = {"passed": False, "provenance": {str(p): sha256(p) for p in provenance},
+          "reference_scope": "Pinned upstream F32 model/MATH-attention trajectory oracle; not an unmodified upstream sampler latency measurement.",
+          "cases": {}}
+(output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+sources = list((ROOT / "checkpoint22-quality-reference-preparation").glob(r"*\conditions.safetensors"))
+for directory in ("parser-free-checkpoint9-regression", "parser-checkpoint9-final", "parser-checkpoint9",
+                  "preprocess-checkpoint7", "preprocess-checkpoint7-final"):
+    sources.extend((ROOT / directory).glob(r"*\conditions.safetensors"))
+by_hash = {sha256(path): path for path in sources}
+for label, reference in (("tops", ROOT / "checkpoint21-reference-20-step"),
+                         ("bottoms", ROOT / "checkpoint25-bottoms-reference")):
+    rm = json.loads((reference / "manifest.json").read_text(encoding="utf-8"))
+    if rm["category"] != label:
+        raise RuntimeError("Unexpected reference category")
+    conditions = by_hash[rm["inputs_sha256"]]
+    category = {"tops": 1, "bottoms": 2}[label]
+    directory = output / label
+    command = [str(exe), str(model), str(conditions), str(directory), "20", "1.5", "1.5", "1", "42", str(category), "16",
+               "--backend", "BLAS", "--matrix-type", "bf16", "--upcast-matrices", "--mmap", "off",
+               "--load-threads", "2", "--precompute-modulations", "--fused-gelu"]
+    measurement = measure_command(command, output / (label + ".log"), 7200, output / (label + "-timeline.jsonl"))
+    row = {"conditions": str(conditions), "conditions_sha256": sha256(conditions), "measurement": measurement}
+    report["cases"][label] = row
+    (output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if measurement["exit_code"]:
+        raise RuntimeError(f"{label} generation failed")
+    row["comparison"] = compare(reference, directory, output / (label + "-comparison"))
+    row["manifest"] = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    panel = Image.new("RGB", (576 * 3, 904), "white")
+    draw = ImageDraw.Draw(panel)
+    for index, (name, title) in enumerate((("reference.png", "Pinned F32 PyTorch oracle"),
+                                           ("native.png", "Native BF16 storage / BLAS F32"),
+                                           ("difference-x32.png", "Absolute difference x32"))):
+        with Image.open(output / (label + "-comparison") / name) as image:
+            panel.paste(image, (index * 576, 40))
+        draw.text((index * 576 + 10, 12), title, fill="black")
+    panel.save(output / (label + "-comparison.png"))
+    (output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(label, row["manifest"]["sampling_seconds"], measurement["peak_working_set_bytes"],
+          row["comparison"]["passed"], row["comparison"]["pixels"], flush=True)
+    if not row["comparison"]["passed"]:
+        raise RuntimeError(f"{label} full trajectory gate failed")
+report["passed"] = True
+(output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

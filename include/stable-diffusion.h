@@ -503,6 +503,52 @@ SD_API bool generate_image(sd_ctx_t* sd_ctx,
                            sd_image_t** images_out,
                            int* num_images_out);
 
+enum sd_try_on_category_t {
+    SD_TRY_ON_TOPS = 1,
+    SD_TRY_ON_BOTTOMS = 2,
+    SD_TRY_ON_ONE_PIECES = 3,
+};
+
+typedef struct {
+    size_t struct_size;
+    sd_image_t ca_image;
+    sd_image_t garment_image;
+    sd_image_t person_pose;
+    sd_image_t garment_pose;
+    enum sd_try_on_category_t category;
+    int steps;
+    float cfg;
+    float shift;
+    int skip_cfg_last_n_steps;
+    uint64_t seed;
+    int sample_count;
+    int crop_x;
+    int crop_y;
+    int crop_width;
+    int crop_height;
+} sd_try_on_params_t;
+
+SD_API void sd_try_on_params_init(sd_try_on_params_t* params);
+SD_API bool sd_ctx_supports_try_on(const sd_ctx_t* sd_ctx);
+// Prepared 576x864 RGB/RGB/grayscale/grayscale inputs, without resizing.
+// Output ownership follows generate_image/free_sd_images.
+SD_API bool generate_try_on(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params,
+                            sd_image_t** images_out, int* num_images_out);
+
+// Request-local callbacks run synchronously on the generation thread. Keep data
+// alive until return; cancellation may be observed only between model forwards.
+// A supplied callback object replaces the global progress callback for this request.
+typedef struct {
+    size_t struct_size;
+    sd_progress_cb_t progress;
+    bool (*cancelled)(void* data);
+    void* data;
+} sd_try_on_callbacks_t;
+
+SD_API bool generate_try_on_with_callbacks(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params,
+                                           const sd_try_on_callbacks_t* callbacks,
+                                           sd_image_t** images_out, int* num_images_out);
+
 enum sd_cancel_mode_t {
     // Stop the current generation as soon as possible.
     SD_CANCEL_ALL,

@@ -1,0 +1,415 @@
+{
+  "scope": "Numerical image comparisons, not garment quality scores; original images linked at full resolution.",
+  "spec_sha256": "2bf7594897080f57b5a857b383308b8e8931a056869afc7fc711db013d1aa966",
+  "additional_specs_sha256": {},
+  "cases": {
+    "cardigan-blas-floating": {
+      "metrics": {
+        "changed_channels": 23,
+        "total_channels": 1327104,
+        "changed_pixels": 23,
+        "max_abs": 1.0,
+        "mae": 1.7330970293209876e-05,
+        "rmse": 0.004163048197320069,
+        "psnr_db": 95.74257483024704
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_5.png",
+          "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+        },
+        "garment": {
+          "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+          "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-blas\\step-19.safetensors",
+          "sha256": "72c5ea947d33dac100a1f0d9e4c2364ec57e5b9ce1e7cca14a01cc2680cd4ba0",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+          "sha256": "3aa69d62cbb797d319c1d4b180bf46888ac658a9d433c361f6f6d936fd374265",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "Same 20 steps, CFG1.5, shift1.5, skip1, seed42 and crop. Full native floating trajectory agreement is recorded separately."
+    },
+    "cardigan-blas-upstream": {
+      "metrics": {
+        "changed_channels": 82,
+        "total_channels": 1327104,
+        "changed_pixels": 82,
+        "max_abs": 1.0,
+        "mae": 6.178867669753087e-05,
+        "rmse": 0.007860577376855396,
+        "psnr_db": 90.2217146665858
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_5.png",
+          "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+        },
+        "garment": {
+          "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+          "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-blas\\step-19.safetensors",
+          "sha256": "72c5ea947d33dac100a1f0d9e4c2364ec57e5b9ce1e7cca14a01cc2680cd4ba0",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint27-upstream-cardigan\\sample-0.png",
+          "sha256": "574ab54cb2d92bdef468cc3c9ba308346898f4660bf29dece21646f36be78646"
+        }
+      },
+      "scope": "Original unmodified Python sampler, default attention/batched CFG, versus optimized native BLAS. These are final pixels, not a Python intermediate-trajectory comparison."
+    },
+    "cardigan-q8-floating": {
+      "metrics": {
+        "changed_channels": 252503,
+        "total_channels": 1327104,
+        "changed_pixels": 175282,
+        "max_abs": 83.0,
+        "mae": 0.2586549358603395,
+        "rmse": 1.5938629945117364,
+        "psnr_db": 44.08178385825209
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_5.png",
+          "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+        },
+        "garment": {
+          "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+          "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-q8\\step-19.safetensors",
+          "sha256": "572e1771da63107c84f40701d3d877fe37aead181fea63a6fe6dc054263101f4",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+          "sha256": "3aa69d62cbb797d319c1d4b180bf46888ac658a9d433c361f6f6d936fd374265",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix."
+    },
+    "cardigan-mixed-floating": {
+      "metrics": {
+        "changed_channels": 170921,
+        "total_channels": 1327104,
+        "changed_pixels": 118827,
+        "max_abs": 82.0,
+        "mae": 0.19067759572723766,
+        "rmse": 1.5153373609421787,
+        "psnr_db": 44.52061698907283
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_5.png",
+          "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+        },
+        "garment": {
+          "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+          "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-mixed\\step-19.safetensors",
+          "sha256": "b2d94e3032a671286a455d745a10fe94c126c151ff2b97cb90f6da9a787b90b1",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-floating-cpu\\step-19.safetensors",
+          "sha256": "3aa69d62cbb797d319c1d4b180bf46888ac658a9d433c361f6f6d936fd374265",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix."
+    },
+    "cardigan-mixed-q8": {
+      "metrics": {
+        "changed_channels": 171419,
+        "total_channels": 1327104,
+        "changed_pixels": 133096,
+        "max_abs": 15.0,
+        "mae": 0.13324125313464505,
+        "rmse": 0.38445650389272473,
+        "psnr_db": 56.4338593624927
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_5.png",
+          "sha256": "5faaea84635da215bd0819cf5ce65512ca1b742c39ee8fd67176b19e084ed872"
+        },
+        "garment": {
+          "path": "local-experiment\\quality-fixtures\\21514384_52353349_1000.jpg",
+          "sha256": "fd74b6db0fea913db3a18e4a154d4035c0149c9250f7e1335dbd6077c0318064"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-mixed\\step-19.safetensors",
+          "sha256": "b2d94e3032a671286a455d745a10fe94c126c151ff2b97cb90f6da9a787b90b1",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint38-integrated\\cardigan-q8\\step-19.safetensors",
+          "sha256": "572e1771da63107c84f40701d3d877fe37aead181fea63a6fe6dc054263101f4",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "The four original-value F32 restorations remain frozen from the prior bottoms study. No new tuning; remaining boundary errors are not eliminated."
+    },
+    "bottoms-blas-floating": {
+      "metrics": {
+        "changed_channels": 18,
+        "total_channels": 1327104,
+        "changed_pixels": 18,
+        "max_abs": 1.0,
+        "mae": 1.3563368055555555e-05,
+        "rmse": 0.003682847818679935,
+        "psnr_db": 96.8071281393899
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_8.png",
+          "sha256": "bf4f2064cc6efe6aa4b6bb503d6d2aadba4feff13b5784457ed7ddd63c1fc20f"
+        },
+        "garment": {
+          "path": "local-experiment\\source\\examples\\data\\model.webp",
+          "sha256": "412ce3a20bd0bbf969cf526c759999061c91e8054bc7ec5a54f2780ca0942da5"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint35-full-acceptance\\bottoms\\step-19.safetensors",
+          "sha256": "2e89cc5617fb4d3858a9d2ae7543890bffa12c2444c9990fa763f86b894a5301",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint34-full-acceptance\\full-trajectory\\step-19.safetensors",
+          "sha256": "74b9369814a64ff265b69e1e1ebf4a90fd69c8ec127098c2794b3b798247b615",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "Same 20 steps, CFG1.5, shift1.5, skip1, seed42 and crop. Full native floating trajectory agreement is recorded separately."
+    },
+    "bottoms-blas-upstream": {
+      "metrics": {
+        "changed_channels": 44,
+        "total_channels": 1327104,
+        "changed_pixels": 44,
+        "max_abs": 1.0,
+        "mae": 3.315489969135802e-05,
+        "rmse": 0.005758029149922569,
+        "psnr_db": 92.9253264255611
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_8.png",
+          "sha256": "bf4f2064cc6efe6aa4b6bb503d6d2aadba4feff13b5784457ed7ddd63c1fc20f"
+        },
+        "garment": {
+          "path": "local-experiment\\source\\examples\\data\\model.webp",
+          "sha256": "412ce3a20bd0bbf969cf526c759999061c91e8054bc7ec5a54f2780ca0942da5"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint35-full-acceptance\\bottoms\\step-19.safetensors",
+          "sha256": "2e89cc5617fb4d3858a9d2ae7543890bffa12c2444c9990fa763f86b894a5301",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint27-upstream-bottoms\\sample-0.png",
+          "sha256": "0acfe49e5fac5904645c7b98473c6af99d0988bb7e7082e8ed118d43be14e1b4"
+        }
+      },
+      "scope": "Original unmodified Python sampler, default attention/batched CFG, versus optimized native BLAS. These are final pixels, not a Python intermediate-trajectory comparison."
+    },
+    "bottoms-q8-floating": {
+      "metrics": {
+        "changed_channels": 167013,
+        "total_channels": 1327104,
+        "changed_pixels": 136079,
+        "max_abs": 41.0,
+        "mae": 0.13016236858603394,
+        "rmse": 0.4239764974155116,
+        "psnr_db": 55.58396795444971
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_8.png",
+          "sha256": "bf4f2064cc6efe6aa4b6bb503d6d2aadba4feff13b5784457ed7ddd63c1fc20f"
+        },
+        "garment": {
+          "path": "local-experiment\\source\\examples\\data\\model.webp",
+          "sha256": "412ce3a20bd0bbf969cf526c759999061c91e8054bc7ec5a54f2780ca0942da5"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\bottoms-q8\\step-19.safetensors",
+          "sha256": "d758f16c32bd7d59572564e7501054c82d230f5f9cfce5b24d01684cc06d4fdd",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint34-full-acceptance\\full-trajectory\\step-19.safetensors",
+          "sha256": "74b9369814a64ff265b69e1e1ebf4a90fd69c8ec127098c2794b3b798247b615",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix."
+    },
+    "bottoms-mixed-floating": {
+      "metrics": {
+        "changed_channels": 74044,
+        "total_channels": 1327104,
+        "changed_pixels": 65378,
+        "max_abs": 30.0,
+        "mae": 0.058326250241126545,
+        "rmse": 0.2895599656672289,
+        "psnr_db": 58.89603327942615
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_8.png",
+          "sha256": "bf4f2064cc6efe6aa4b6bb503d6d2aadba4feff13b5784457ed7ddd63c1fc20f"
+        },
+        "garment": {
+          "path": "local-experiment\\source\\examples\\data\\model.webp",
+          "sha256": "412ce3a20bd0bbf969cf526c759999061c91e8054bc7ec5a54f2780ca0942da5"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\bottoms-mixed\\step-19.safetensors",
+          "sha256": "1bbddc83776cf0c1fd167a9292257186ca408748555a039a7c3346acdbf3999f",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint34-full-acceptance\\full-trajectory\\step-19.safetensors",
+          "sha256": "74b9369814a64ff265b69e1e1ebf4a90fd69c8ec127098c2794b3b798247b615",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "Runtime-ready loading, modulation cache and fused GELU preserve all 21 same-policy recordings bit-for-bit. Quantized floating-equivalence gates still fail; smaller RAM is not a quality fix."
+    },
+    "bottoms-mixed-q8": {
+      "metrics": {
+        "changed_channels": 149095,
+        "total_channels": 1327104,
+        "changed_pixels": 124006,
+        "max_abs": 11.0,
+        "mae": 0.11341236255787036,
+        "rmse": 0.3428698573818939,
+        "psnr_db": 57.42821747290804
+      },
+      "sources": {
+        "person": {
+          "path": "local-experiment\\quality-fixtures\\model_8.png",
+          "sha256": "bf4f2064cc6efe6aa4b6bb503d6d2aadba4feff13b5784457ed7ddd63c1fc20f"
+        },
+        "garment": {
+          "path": "local-experiment\\source\\examples\\data\\model.webp",
+          "sha256": "412ce3a20bd0bbf969cf526c759999061c91e8054bc7ec5a54f2780ca0942da5"
+        },
+        "native": {
+          "path": "local-experiment\\checkpoint38-integrated\\bottoms-mixed\\step-19.safetensors",
+          "sha256": "1bbddc83776cf0c1fd167a9292257186ca408748555a039a7c3346acdbf3999f",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        },
+        "reference": {
+          "path": "local-experiment\\checkpoint38-integrated\\bottoms-q8\\step-19.safetensors",
+          "sha256": "d758f16c32bd7d59572564e7501054c82d230f5f9cfce5b24d01684cc06d4fdd",
+          "crop": {
+            "x": 0,
+            "y": 48,
+            "width": 576,
+            "height": 768
+          }
+        }
+      },
+      "scope": "The four original-value F32 restorations remain frozen from the prior bottoms study. No new tuning; remaining boundary errors are not eliminated."
+    }
+  }
+}

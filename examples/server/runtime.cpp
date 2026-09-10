@@ -167,6 +167,9 @@ std::string video_mime_type(const std::string& output_format) {
 }
 
 bool runtime_supports_generation_mode(const ServerRuntime& runtime, SDMode mode) {
+    if (mode == TRY_ON) {
+        return sd_ctx_supports_try_on(runtime.sd_ctx);
+    }
     if (mode == VID_GEN) {
         return sd_ctx_supports_video_generation(runtime.sd_ctx);
     }
@@ -177,6 +180,9 @@ bool runtime_supports_generation_mode(const ServerRuntime& runtime, SDMode mode)
 }
 
 std::string unsupported_generation_mode_error(SDMode mode) {
+    if (mode == TRY_ON) {
+        return "loaded model does not support try_on";
+    }
     if (mode == VID_GEN) {
         return "loaded model does not support vid_gen";
     }
@@ -192,6 +198,8 @@ ArgOptions SDSvrParams::get_options() {
     options.string_options = {
         {"-l", "--listen-ip", "server listen ip (default: 127.0.0.1)", 0, &listen_ip},
         {"", "--serve-html-path", "path to HTML file to serve at root (optional)", 0, &serve_html_path},
+        {"", "--try-on-dwpose-dir", "opt in to native raw try-on preparation using local pinned DWPose models", 0, &try_on_dwpose_dir},
+        {"", "--try-on-parser-dir", "local evaluation-only parser ONNX export (requires explicit license consent)", 0, &try_on_parser_dir},
     };
 
     options.int_options = {
@@ -200,6 +208,8 @@ ArgOptions SDSvrParams::get_options() {
 
     options.bool_options = {
         {"", "--color", "colors the logging tags according to level", true, &color},
+        {"", "--accept-parser-research-license", "accept parser non-commercial research/evaluation restriction", true, &accept_parser_research_license},
+        {"", "--try-on-ort-no-arena", "disable native preparation ORT CPU arenas to reduce retained memory", true, &try_on_ort_no_arena},
     };
 
     auto on_help_arg = [&](int, const char**, int, bool& valid) {
@@ -216,6 +226,14 @@ ArgOptions SDSvrParams::get_options() {
 }
 
 bool SDSvrParams::validate() {
+    if (try_on_ort_no_arena && try_on_dwpose_dir.empty()) {
+        LOG_ERROR("--try-on-ort-no-arena requires --try-on-dwpose-dir");
+        return false;
+    }
+    if (!try_on_parser_dir.empty() && (try_on_dwpose_dir.empty() || !accept_parser_research_license)) {
+        LOG_ERROR("--try-on-parser-dir requires --try-on-dwpose-dir and --accept-parser-research-license");
+        return false;
+    }
     if (listen_ip.empty()) {
         LOG_ERROR("error: the following arguments are required: listen_ip");
         return false;

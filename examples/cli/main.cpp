@@ -19,6 +19,7 @@
 #include "common/common.h"
 #include "common/media_io.h"
 #include "common/resource_owners.hpp"
+#include "common/try_on.h"
 #include "image_metadata.h"
 
 namespace fs = std::filesystem;
@@ -38,6 +39,8 @@ struct SDCliParams {
     int output_begin_idx    = -1;
     int compression_quality = 90;
     std::string image_path;
+    std::string try_on_inputs;
+    int skip_cfg_last_n_steps = 1;
     std::string metadata_format = "text";
 
     sd_log_level_t log_level = SD_LOG_INFO;
@@ -64,6 +67,11 @@ struct SDCliParams {
         ArgOptions options;
 
         options.string_options = {
+            {"",
+             "--try-on-inputs",
+             "prepared FASHN try-on JSON manifest (try_on mode)",
+             0,
+             &try_on_inputs},
             {"-o",
              "--output",
              "path to write result image to. you can use printf-style %d format specifiers for image sequences (default: ./output.png) (eg. output_%03d.png). Single-file video outputs support .avi, .webm, and animated .webp",
@@ -92,6 +100,10 @@ struct SDCliParams {
         };
 
         options.int_options = {
+            {"",
+             "--skip-cfg-last-n-steps",
+             "use conditional-only velocity for the last N FASHN steps (default: 1)",
+             &skip_cfg_last_n_steps},
             {"",
              "--preview-interval",
              "preview interval: in each sampling pass, positive N updates every Nth denoiser step and -N previews only completed logical step N; 0 previews the final completed step of the first pass (base-resolution or high-noise). Default: 1",
@@ -200,7 +212,7 @@ struct SDCliParams {
         options.manual_options = {
             {"-M",
              "--mode",
-             "run mode, one of [img_gen, adetailer, vid_gen, upscale, convert, metadata], default: img_gen",
+             "run mode, one of [img_gen, adetailer, vid_gen, upscale, convert, metadata, try_on], default: img_gen",
              on_mode_arg},
             {"",
              "--preview",
@@ -297,6 +309,20 @@ void print_usage(int argc, const char* argv[], const std::vector<ArgOptions>& op
 }
 
 void parse_args(int argc, const char** argv, SDCliParams& cli_params, SDContextParams& ctx_params, SDGenerationParams& gen_params) {
+    std::string requested_mode;
+    for (int i = 1; i + 1 < argc; ++i) {
+        if (std::string(argv[i]) == "--mode" || std::string(argv[i]) == "-M") {
+            requested_mode = argv[i + 1];
+        }
+    }
+    if (requested_mode == "try_on") {
+        gen_params.sample_params.sample_steps = 30;
+        gen_params.sample_params.guidance.txt_cfg = 1.5f;
+        gen_params.sample_params.flow_shift = 1.5f;
+        gen_params.width = 576;
+        gen_params.height = 864;
+        ctx_params.rng_type = CPU_RNG;
+    }
     std::vector<ArgOptions> options_vec = {cli_params.get_options(), ctx_params.get_options(), gen_params.get_options()};
 
     if (!parse_options(argc, argv, options_vec)) {
@@ -310,9 +336,9 @@ void parse_args(int argc, const char** argv, SDCliParams& cli_params, SDContextP
     bool valid = cli_params.resolve_and_validate();
     if (valid && cli_params.mode != METADATA) {
         valid = ctx_params.resolve_and_validate(cli_params.mode) &&
-                gen_params.resolve_and_validate(cli_params.mode,
+                (cli_params.mode == TRY_ON || gen_params.resolve_and_validate(cli_params.mode,
                                                 ctx_params.lora_model_dir,
-                                                ctx_params.hires_upscalers_dir);
+                                                ctx_params.hires_upscalers_dir));
     }
 
     if (!valid) {
@@ -638,6 +664,72 @@ static bool apply_adetailer(sd_ctx_t* sd_ctx,
     return true;
 }
 
+static int run_try_on(const SDCliParams& cli, SDContextParams& context, const SDGenerationParams& generation) {
+    const auto& sample = generation.sample_params;
+    if ((sample.sample_method != SAMPLE_METHOD_COUNT && sample.sample_method != EULER_SAMPLE_METHOD) ||
+        sample.scheduler != SCHEDULER_COUNT || !generation.custom_sigmas.empty() ||
+        !generation.extra_sample_args.empty() || sample.guidance.slg.scale != 0.f ||
+        sample.guidance.distilled_guidance != 3.5f || sample.guidance.img_cfg != INFINITY ||
+        sample.eta != INFINITY || sample.shifted_timestep != 0) {
+        LOG_ERROR("try_on uses its own ascending-time Euler/CFG sampler; custom schedulers, sigmas, eta, distilled/image/SLG guidance and extra sampler arguments are unsupported");
+        return 1;
+    }
+    if (cli.try_on_inputs.empty() || generation.width != 576 || generation.height != 864 ||
+        !generation.prompt.empty() || !generation.negative_prompt.empty() ||
+        !generation.init_image_path.empty() || !generation.ref_image_paths.empty() ||
+        !generation.mask_image_path.empty() || !generation.control_image_path.empty() ||
+        !generation.ip_adapter_image_path.empty() || !generation.end_image_path.empty() ||
+        !generation.ref_video_paths.empty() || !generation.ref_audio_paths.empty() ||
+        !generation.ref_video_audio_paths.empty() || !generation.control_video_path.empty() ||
+        !generation.ad_model_path.empty() || generation.hires_enabled || !generation.cache_mode.empty() ||
+        !context.esrgan_path.empty() || cli.preview_method != PREVIEW_NONE) {
+        LOG_ERROR("try_on requires --try-on-inputs at 576x864; prompts, img2img/reference inputs, adetailer, hires, cache, upscaling and previews are unsupported");
+        return 1;
+    }
+    PreparedTryOnInputs prepared;
+    if (!prepared.load_manifest(cli.try_on_inputs)) {
+        return 1;
+    }
+    prepared.params.steps = generation.sample_params.sample_steps;
+    prepared.params.cfg = generation.sample_params.guidance.txt_cfg;
+    prepared.params.shift = generation.sample_params.flow_shift;
+    prepared.params.skip_cfg_last_n_steps = cli.skip_cfg_last_n_steps;
+    prepared.params.seed = static_cast<uint64_t>(generation.seed);
+    prepared.params.sample_count = generation.batch_count;
+    auto params = context.to_sd_ctx_params_t(false);
+    SDCtxPtr ctx(new_sd_ctx(&params));
+    if (!ctx || !sd_ctx_supports_try_on(ctx.get())) {
+        LOG_ERROR("try_on requires a supported FASHN VTON 1.5 checkpoint");
+        return 1;
+    }
+    sd_image_t* images = nullptr;
+    int count = 0;
+    if (!generate_try_on(ctx.get(), &prepared.params, &images, &count)) {
+        return 1;
+    }
+    bool success = true;
+    for (int i = 0; i < count; ++i) {
+        fs::path path = cli.output_path;
+        if (std::regex_search(cli.output_path, format_specifier_regex)) {
+            path = format_frame_idx(cli.output_path, i + std::max(cli.output_begin_idx, 0));
+        } else if (count > 1) {
+            path = path.parent_path() / (path.stem().string() + "_" + std::to_string(i) + path.extension().string());
+        }
+        if (encoded_image_format_from_path(path.string()) == EncodedImageFormat::UNKNOWN) {
+            path += ".png";
+        }
+        if (write_image_to_file(path.string(), images[i].data, images[i].width, images[i].height,
+                                 images[i].channel, "FASHN VTON 1.5 prepared-input try_on", cli.compression_quality)) {
+            LOG_INFO("try-on output: %s", path.string().c_str());
+        } else {
+            LOG_ERROR("Failed to write try-on output '%s'", path.string().c_str());
+            success = false;
+        }
+    }
+    free_sd_images(images, count);
+    return success ? 0 : 1;
+}
+
 int main(int argc, const char* argv[]) {
     if (argc > 1 && std::string(argv[1]) == "--version") {
         std::cout << version_string() << "\n";
@@ -650,6 +742,9 @@ int main(int argc, const char* argv[]) {
 
     parse_args(argc, argv, cli_params, ctx_params, gen_params);
     sd_set_log_callback(sd_log_cb, (void*)&cli_params);
+    if (cli_params.mode == TRY_ON) {
+        return run_try_on(cli_params, ctx_params, gen_params);
+    }
 
     if (cli_params.mode == METADATA) {
         MetadataReadOptions options;

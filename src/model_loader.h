@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "model.h"
+#include "core/load_diagnostics.h"
 
 TensorTypeRules parse_tensor_type_rules(const std::string& tensor_type_rules);
 
@@ -38,6 +39,7 @@ protected:
     String2TensorStorage tensor_storage_map;
     std::map<std::string, std::string> metadata_;
     int n_threads_;
+    std::shared_ptr<LoadDiagnostics> diagnostics_;
 
     size_t add_file_path(const std::string& file_path);
     void add_tensor_storage(const TensorStorage& tensor_storage);
@@ -50,10 +52,22 @@ protected:
     bool init_from_diffusers_file(const std::string& file_path, const std::string& prefix = "");
 
 public:
+    struct MappedFileInfo {
+        std::string path;
+        uintptr_t address;
+        size_t bytes;
+    };
+    void set_diagnostics(std::shared_ptr<LoadDiagnostics> diagnostics) { diagnostics_ = std::move(diagnostics); }
+    void diagnostic_event(const char* phase) const {
+        if (diagnostics_ && diagnostics_->event)
+            diagnostics_->event(phase);
+    }
+    std::vector<MappedFileInfo> mapped_files() const;
+
     ModelLoader();
 
     bool init_from_file(const std::string& file_path, const std::string& prefix = "");
-    void convert_tensors_name();
+    bool convert_tensors_name();
     bool init_from_file_and_convert_name(const std::string& file_path,
                                          const std::string& prefix = "",
                                          SDVersion version         = VERSION_COUNT);

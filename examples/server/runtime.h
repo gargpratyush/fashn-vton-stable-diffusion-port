@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -9,18 +10,26 @@
 #include <json.hpp>
 #include "common/common.h"
 #include "common/resource_owners.hpp"
+#include "common/try_on.h"
 #include "stable-diffusion.h"
+
+constexpr size_t SD_TRY_ON_MAX_REQUEST_BYTES = 4 * SD_PREPARED_IMAGE_MAX_ENCODED_SIZE + 4096;
 
 using json = nlohmann::json;
 
 struct ArgOptions;
 struct SDContextParams;
 struct AsyncJobManager;
+namespace fashn_prepare { class Preparer; }
 
 struct SDSvrParams {
     std::string listen_ip = "127.0.0.1";
     int listen_port       = 1234;
     std::string serve_html_path;
+    std::string try_on_dwpose_dir;
+    std::string try_on_parser_dir;
+    bool accept_parser_research_license = false;
+    bool try_on_ort_no_arena = false;
     bool normal_exit = false;
     sd_log_level_t log_level = SD_LOG_INFO;
     bool color       = false;
@@ -56,6 +65,8 @@ struct ServerRuntime {
     std::vector<UpscalerEntry>* upscaler_cache;
     std::mutex* upscaler_mutex;
     AsyncJobManager* async_job_manager;
+    std::shared_ptr<fashn_prepare::Preparer> try_on_preparer;
+    bool try_on_parser_enabled = false;
 };
 
 struct ImgGenJobRequest {
@@ -77,6 +88,23 @@ struct VidGenJobRequest {
         return gen_params.to_sd_vid_gen_params_t();
     }
 };
+
+struct TryOnJobRequest {
+    PreparedTryOnInputs inputs;
+    bool raw = false;
+    std::array<std::string, 2> raw_images;
+    std::string category;
+    std::string garment_photo_type;
+    bool segmentation_free = true;
+    void release_raw_images() {
+        for (auto& image : raw_images)
+            std::string().swap(image);
+    }
+};
+
+bool initialize_try_on_preparer(ServerRuntime& runtime, std::string& error_message);
+bool parse_try_on_request(const json& body, TryOnJobRequest& request, std::string& error_message,
+                          bool allow_raw = false, bool allow_parser = false);
 
 std::string base64_encode(const std::vector<uint8_t>& bytes);
 std::string normalize_output_format(std::string output_format);

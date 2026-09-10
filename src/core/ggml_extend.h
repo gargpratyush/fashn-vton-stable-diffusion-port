@@ -204,10 +204,12 @@ ggml_tensor* ggml_ext_attention_ext(ggml_context* ctx,
                                     ggml_tensor* k,
                                     ggml_tensor* v,
                                     int64_t n_head,
-                                    ggml_tensor* mask = nullptr,
-                                    bool skip_reshape = false,
-                                    bool flash_attn   = false,
-                                    float kv_scale    = 1.0f);
+                                    ggml_tensor* mask      = nullptr,
+                                    bool skip_reshape      = false,
+                                    bool flash_attn        = false,
+                                    float kv_scale         = 1.0f,
+                                    bool flash_attn_f32_kv = false,
+                                    ggml_backend_dev_t attention_fallback_device = nullptr);
 
 ggml_tensor* ggml_ext_layer_norm(ggml_context* ctx,
                                  ggml_tensor* x,
