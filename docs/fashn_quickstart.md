@@ -10,6 +10,12 @@ Visual Studio 2022. WSL is suitable for Git operations; that does not imply
 the published Windows latency/memory results were measured under WSL.
 Other platforms and GPUs need their own validation.
 
+For the proposed ARM64 Android path, platform gaps and sequential acceptance
+checkpoints, see [the Android feasibility plan](fashn_android_plan.md).
+That plan does not establish Android runtime support.
+For the prepared-input source/data bundle and exact Windows ARM64/Android
+handoff steps, see [the device transfer runbook](fashn_arm_transfer.md).
+
 ## Clone the complete source
 
 ```powershell

@@ -7,7 +7,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 4) {
-        std::cerr << "Usage: test-fashn-vton-conversion source converted f32|f16|bf16|q8_0"
+        std::cerr << "Usage: test-fashn-vton-conversion source converted f32|f16|bf16|q8_0|q4_0|q5_0|q4_K|q5_K"
                      " [--runtime-policy] [--f32-matrices policy.json]\n";
         return 2;
     }
@@ -30,10 +30,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     const std::string mode = argv[3];
-    ggml_type target       = mode == "f32" ? GGML_TYPE_F32 : mode == "f16" ? GGML_TYPE_F16
-                                                         : mode == "bf16"  ? GGML_TYPE_BF16
-                                                         : mode == "q8_0"  ? GGML_TYPE_Q8_0
-                                                                           : GGML_TYPE_COUNT;
+    ggml_type target       = fashn_test_matrix_type(mode);
     if (target == GGML_TYPE_COUNT)
         return 2;
     ModelLoader source, converted;
@@ -53,8 +50,9 @@ int main(int argc, char** argv) {
             return 1;
         bool eligible = FashnVTONConfig::is_quantizable_matrix(name, tensor);
         auto wanted = runtime_policy ? tensor.expected_type :
-                      (target == GGML_TYPE_Q8_0 && !eligible ? GGML_TYPE_F32 : target);
+                      (ggml_is_quantized(target) && !eligible ? GGML_TYPE_F32 : target);
         bool q8 = wanted == GGML_TYPE_Q8_0;
+        bool quantized_tensor = ggml_is_quantized(wanted);
         if (match->second.type != wanted) {
             std::cerr << "Wrong conversion policy for " << name << "\n";
             return 1;
@@ -68,10 +66,14 @@ int main(int argc, char** argv) {
         auto a = load_fixture(source, name), b = load_fixture(converted, name);
         if (a.empty() || a.numel() != b.numel())
             return 1;
-        if (q8) {
+        if (quantized_tensor) {
+            if (tensor.ne[0] % ggml_blck_size(wanted) != 0)
+                return 1;
             std::vector<uint8_t> expected(match->second.nbytes()), actual(expected.size());
+            // The converter supplies uniform importance, not a null importance vector.
+            std::vector<float> importance(static_cast<size_t>(tensor.ne[0]), 1.f);
             ggml_quantize_chunk(wanted, a.data(), expected.data(), 0,
-                                a.numel() / tensor.ne[0], tensor.ne[0], nullptr);
+                                a.numel() / tensor.ne[0], tensor.ne[0], importance.data());
             auto ctx = ggml_init({ggml_tensor_overhead(), nullptr, true});
             if (!ctx)
                 return 1;
@@ -79,7 +81,7 @@ int main(int argc, char** argv) {
             auto raw = ggml_new_tensor(ctx, wanted, match->second.n_dims, match->second.ne);
             raw->data = actual.data();
             if (!converted.load_tensor(match->second, raw) || actual != expected) {
-                std::cerr << "Q8 blocks differ from original-weight quantization: " << name << "\n";
+                std::cerr << "Quantized blocks differ from original-weight quantization: " << name << "\n";
                 return 1;
             }
         }
@@ -101,7 +103,8 @@ int main(int argc, char** argv) {
                 else if (wanted == GGML_TYPE_BF16)
                     expected = ggml_bf16_to_fp32(ggml_fp32_to_bf16(expected));
                 if (!std::isfinite(b.values()[i]) ||
-                    (q8 ? std::abs(expected - b.values()[i]) > bound : expected != b.values()[i])) {
+                    (q8 ? std::abs(expected - b.values()[i]) > bound :
+                          (!quantized_tensor && expected != b.values()[i]))) {
                     std::cerr << "Tensor roundtrip mismatch: " << name << " index " << i
                               << " expected " << expected << " actual " << b.values()[i] << " bound " << bound << "\n";
                     return 1;
@@ -113,9 +116,9 @@ int main(int argc, char** argv) {
         }
         worst_relative_l2 = std::max(worst_relative_l2, std::sqrt(error2 / std::max(norm2, 1e-24)));
         ++checked;
-        quantized += q8;
+        quantized += quantized_tensor;
     }
-    if (target == GGML_TYPE_Q8_0) {
+    if (ggml_is_quantized(target)) {
         sd_ctx_params_t params;
         sd_ctx_params_init(&params);
         params.diffusion_model_path = argv[2];

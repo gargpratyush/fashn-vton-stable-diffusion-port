@@ -62,15 +62,17 @@ static void test_contract() {
         require(valid(tensors, &error), "supported floating dtype");
     }
     tensors                                                = make_metadata();
-    tensors.at("double_blocks.0.img_attn.qkv.weight").type = GGML_TYPE_Q8_0;
-    require(valid(tensors, &error), "eligible Q8_0 matrix metadata for conversion diagnostics");
-    for (const char* name : {"garment_embedder.proj.weight", "y_embedder.weight",
-                             "single_blocks.0.modulation.lin.weight", "final_layer.linear.weight"}) {
-        auto invalid          = make_metadata();
-        invalid.at(name).type = GGML_TYPE_Q8_0;
-        expect_invalid(invalid, "dtype");
+    for (auto type : {GGML_TYPE_Q8_0, GGML_TYPE_Q4_0, GGML_TYPE_Q5_0, GGML_TYPE_Q4_K, GGML_TYPE_Q5_K}) {
+        tensors.at("double_blocks.0.img_attn.qkv.weight").type = type;
+        require(valid(tensors, &error), "eligible quantized matrix metadata for conversion diagnostics");
+        for (const char* name : {"garment_embedder.proj.weight", "y_embedder.weight",
+                                 "single_blocks.0.modulation.lin.weight", "final_layer.linear.weight"}) {
+            auto invalid          = make_metadata();
+            invalid.at(name).type = type;
+            expect_invalid(invalid, "dtype");
+        }
     }
-    tensors.at("double_blocks.0.img_attn.qkv.weight").type = GGML_TYPE_Q4_0;
+    tensors.at("double_blocks.0.img_attn.qkv.weight").type = GGML_TYPE_Q2_K;
     expect_invalid(tensors, "dtype");
 
     tensors = make_metadata();

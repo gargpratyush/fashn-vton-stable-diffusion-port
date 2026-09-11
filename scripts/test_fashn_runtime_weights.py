@@ -30,6 +30,18 @@ class RuntimeExportTests(unittest.TestCase):
         self.assertTrue(re.search(pattern, "model.diffusion_model.block.12.weight"))
         self.assertIsNone(re.search(pattern, "block.112.weight"))
 
+    def test_lower_bit_formats_preserve_restoration_rules(self):
+        for kind in ("q4_0", "q5_0", "q4_K", "q5_K"):
+            with self.subTest(kind=kind):
+                self.assertEqual(conversion_rules(self.fixture(), kind), (kind, ""))
+                default, rule = conversion_rules(self.fixture(), kind, {"f32_matrices": ["block.12.weight"]})
+                pattern, dtype = rule.rsplit("=", 1)
+                self.assertEqual((default, dtype), (kind, "f32"))
+                self.assertTrue(re.search(pattern, "model.diffusion_model.block.12.weight"))
+                self.assertIsNone(re.search(pattern, "block.112.weight"))
+        with self.assertRaises(ValueError):
+            conversion_rules(self.fixture(), "q2_K")
+
     def test_rejects_wrong_counts_and_unsafe_names(self):
         data = self.fixture()
         del data["matrix_types"]["block.0.weight"]

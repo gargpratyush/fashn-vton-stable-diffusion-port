@@ -50,8 +50,11 @@ static ggml_type get_export_tensor_type(ModelLoader& model_loader,
     if (fashn) {
         if (dst_type == GGML_TYPE_COUNT) return tensor_type;
         if (dst_type == GGML_TYPE_F32 || dst_type == GGML_TYPE_F16 || dst_type == GGML_TYPE_BF16) return dst_type;
-        if (dst_type == GGML_TYPE_Q8_0)
-            return FashnVTONConfig::is_quantizable_matrix(name, tensor_storage) ? GGML_TYPE_Q8_0 : GGML_TYPE_F32;
+        if (FashnVTONConfig::is_diagnostic_quant_type(dst_type)) {
+            if (!FashnVTONConfig::is_quantizable_matrix(name, tensor_storage))
+                return GGML_TYPE_F32;
+            return tensor_storage.ne[0] % ggml_blck_size(dst_type) == 0 ? dst_type : GGML_TYPE_COUNT;
+        }
         return GGML_TYPE_COUNT;
     }
     if (model_loader.tensor_should_be_converted(tensor_storage, dst_type)) {
@@ -75,7 +78,7 @@ static bool collect_tensors_for_export(ModelLoader& model_loader,
         info.storage = tensor_storage;
         info.type    = get_export_tensor_type(model_loader, tensor_storage, type, tensor_type_rules, fashn);
         if (info.type == GGML_TYPE_COUNT) {
-            LOG_ERROR("FASHN export supports F32/F16/BF16 and selective Q8_0 only; lower-bit conversion awaits quality validation");
+            LOG_ERROR("FASHN export requires floating or selective diagnostic Q8_0/Q4_0/Q5_0/Q4_K/Q5_K with compatible block dimensions");
             return false;
         }
         tensors.push_back(std::move(info));

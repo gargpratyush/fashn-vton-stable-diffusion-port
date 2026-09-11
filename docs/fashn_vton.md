@@ -830,11 +830,30 @@ two-step comparison. Reports explicitly record skipped tests.
 
 The standard converter now has an explicit FASHN policy. F32/F16/BF16 exports
 convert every tensor, including both patch embeddings and protected layers;
-generic model conversion behavior is unchanged. Selective Q8_0 exports quantize
+generic model conversion behavior is unchanged. Selective diagnostic
+Q8_0/Q4_0/Q5_0/Q4_K/Q5_K exports quantize
 only the 104 eligible attention/MLP matrices and keep all other parameters F32.
 Modulation matrices, embeddings, patch kernels, biases, normalization scales
 and the final layers are never accidentally quantized by that policy.
-Q4/Q5 and other lower-bit exports are rejected pending quality validation.
+Other quantized formats are rejected. These exports do not enable public
+quantized inference. K-block formats additionally require rows divisible by 256.
+See [the Q4/Q5 study plan](fashn_q4_q5_plan.md) for full-image, memory and
+repeatability experiments. Exact encoded-block verification uses the same
+uniform importance vector as conversion; this is not activation calibration.
+
+After the complete study, build a single-file offline comparison report:
+
+```powershell
+python scripts\build_fashn_comparison_report.py --repo . --experiment ..\fashn-vton-reference --output ..\fashn-vton-reference\q45-study\fashn-all-comparisons.html
+```
+
+The report embeds generated images, switchable Q8/BF16/original-Python pixel
+comparisons, current and historical timing/memory tables, repeatability,
+trajectory gates and evidence hashes. Amplified error maps are hidden and
+explicitly labeled as diagnostics. Historical checkpoint-27/38 artifacts
+and the completed Q4/Q5 study must be present; missing evidence is an error.
+No inference, model download or external web service is used when building
+or viewing the report.
 
 ```powershell
 .\build\bin\Release\sd-cli.exe --mode convert --diffusion-model model.safetensors --type bf16 -t 8 -o model-bf16.gguf
@@ -871,7 +890,7 @@ not photographic garment-quality inputs. They exceed the unchanged 0.001
 activation gate but cannot predict the visual severity of a complete
 photographic generation. The accepted low-memory
 implementation instead casts resident F16/BF16 matrices to F32 before use.
-The diagnostic accepts `--matrix-type f16|bf16|q8_0`; add `--upcast-matrices`
+The diagnostic accepts `--matrix-type f32|f16|bf16|q8_0|q4_0|q5_0|q4_K|q5_K`; add `--upcast-matrices`
 to test F32 matrix operands separately from raw low-precision arithmetic.
 This preserves failed experiments as reproducible evidence, not supported modes.
 Converting a Q8 candidate back to float does not restore the lost precision.
@@ -882,7 +901,7 @@ The native loader recognizes the released FASHN preset before generic FLUX
 detection. It preserves the original suffixes under `model.diffusion_model.`,
 validates all required logical shapes and floating dtypes, and rejects missing
 or extra tensors and prefix collisions. The unused `patch_mixer_token` buffer
-is optional. Eligible Q8_0 matrix metadata is accepted for conversion diagnostics,
+is optional. Eligible Q8_0/Q4_0/Q5_0/Q4_K/Q5_K matrix metadata is accepted for conversion diagnostics,
 but the public generation context explicitly rejects quantized checkpoints.
 
 Name-conversion errors propagate to model initialization and conversion callers

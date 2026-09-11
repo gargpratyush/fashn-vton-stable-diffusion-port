@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
     }
     if (argc < 4) {
         std::cerr << "Usage: test-fashn-vton-graph [--list-backends | --backend NAME]\n"
-                     "       test-fashn-vton-graph checkpoint fixtures output [--backend NAME] [--threads N] [--flash-attention] [--matrix-type f32|f16|bf16|q8_0] [--upcast-matrices] [--f32-matrices policy.json] [--no-capture-files] [--profile-ops] [--precompute-modulations] [--fused-gelu]\n";
+                     "       test-fashn-vton-graph checkpoint fixtures output [--backend NAME] [--threads N] [--flash-attention] [--matrix-type f32|f16|bf16|q8_0|q4_0|q5_0|q4_K|q5_K] [--upcast-matrices] [--f32-matrices policy.json] [--no-capture-files] [--profile-ops] [--precompute-modulations] [--fused-gelu]\n";
         return 2;
     }
     bool flash_attention     = false;
@@ -239,15 +239,8 @@ int main(int argc, char** argv) {
             }
         } else if (option == "--matrix-type" && i + 1 < argc) {
             std::string value = argv[++i];
-            if (value == "f32")
-                matrix_type = GGML_TYPE_F32;
-            else if (value == "f16")
-                matrix_type = GGML_TYPE_F16;
-            else if (value == "bf16")
-                matrix_type = GGML_TYPE_BF16;
-            else if (value == "q8_0")
-                matrix_type = GGML_TYPE_Q8_0;
-            else {
+            matrix_type = fashn_test_matrix_type(value);
+            if (matrix_type == GGML_TYPE_COUNT) {
                 std::cerr << "Invalid matrix type\n";
                 return 2;
             }

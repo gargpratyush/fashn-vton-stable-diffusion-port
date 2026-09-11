@@ -1,0 +1,203 @@
+{
+  "schema": "fashn-precision-publication-v1",
+  "files": {
+    "reports/fashn-all-comparisons.html": {
+      "origin": "local-experiment/q45-study/fashn-all-comparisons.html",
+      "original_sha256": "16a0462c200646bcd36ee4da479060753fa33009a46b9dd0eb92803f97b31e40",
+      "published_sha256": "16a0462c200646bcd36ee4da479060753fa33009a46b9dd0eb92803f97b31e40",
+      "bytes": 25676374,
+      "unchanged": true
+    },
+    "reports/evidence/q45-study/results.json": {
+      "origin": "local-experiment/q45-study/results.json",
+      "original_sha256": "2a71eabfa277b079ee4b7264c42bf59dd6c95cb42c8401010545c4ff135392a3",
+      "published_sha256": "06a1059f13a0300e86903cc1a93e56161512801dbeead6feb19a687a8565b13b",
+      "bytes": 309450,
+      "unchanged": false
+    },
+    "reports/evidence/q45-study/q8-vs-lowbit-pixel-differences.json": {
+      "origin": "local-experiment/q45-study/q8-vs-lowbit-pixel-differences.json",
+      "original_sha256": "ae1407896cd08a273078f133ed4025605758e14728a6e33f2e1eec2ef7bbdf84",
+      "published_sha256": "0bb5b180305888e70f8e1708cb1f9ef7a9ac9acdc218af4e7c9cfe7d87ee7309",
+      "bytes": 14152,
+      "unchanged": false
+    },
+    "reports/comparison-gallery-precision/images/cardigan-bf16.png": {
+      "origin": "local-experiment/q45-study/runs/full-cardigan-bf16-s42/sample.png",
+      "original_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "published_sha256": "69b35a0b03199cc00c14c0f212b1ca21136690c50a2b645be9ca7027b4e0598c",
+      "bytes": 417635,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-q8_0.png": {
+      "origin": "local-experiment/q45-study/runs/full-cardigan-q8_0-s42/sample.png",
+      "original_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a",
+      "published_sha256": "04c5b9953487087ce4ef6a6a39283296ec3bb83d932a0add97be5dbd7be8c75a",
+      "bytes": 422352,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-q4_0.png": {
+      "origin": "local-experiment/q45-study/runs/full-cardigan-q4_0-s42/sample.png",
+      "original_sha256": "406b873d25fbebf76ddceb33778dfff607c39c14b5e2f3855f3c48216b9135b7",
+      "published_sha256": "406b873d25fbebf76ddceb33778dfff607c39c14b5e2f3855f3c48216b9135b7",
+      "bytes": 557522,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-q4_K.png": {
+      "origin": "local-experiment/q45-study/runs/full-cardigan-q4_K-s42/sample.png",
+      "original_sha256": "3542f88550d97954db8f00998742f77a3a561f791dc145b5321714d97c3017b2",
+      "published_sha256": "3542f88550d97954db8f00998742f77a3a561f791dc145b5321714d97c3017b2",
+      "bytes": 529403,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-q5_0.png": {
+      "origin": "local-experiment/q45-study/runs/full-cardigan-q5_0-s42/sample.png",
+      "original_sha256": "a3a206bbb45e7a97bf46398afecb996f4b086c06f7dece4172c80a3c80bbda3c",
+      "published_sha256": "a3a206bbb45e7a97bf46398afecb996f4b086c06f7dece4172c80a3c80bbda3c",
+      "bytes": 472012,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-q5_K.png": {
+      "origin": "local-experiment/q45-study/runs/full-cardigan-q5_K-s42/sample.png",
+      "original_sha256": "a6735b3f9729a0e5d474b9b8426e43939c3f7317922c56dbd9c5ab7f49dbdac1",
+      "published_sha256": "a6735b3f9729a0e5d474b9b8426e43939c3f7317922c56dbd9c5ab7f49dbdac1",
+      "bytes": 479471,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-selected-mixed.png": {
+      "origin": "local-experiment/q45-study/runs/full-cardigan-selected-mixed-s42/sample.png",
+      "original_sha256": "1cab571cead8172b771ee78b15bf1646fa8ab635bdb57b773c2eeb46222eee37",
+      "published_sha256": "1cab571cead8172b771ee78b15bf1646fa8ab635bdb57b773c2eeb46222eee37",
+      "bytes": 446902,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-ca_image.png": {
+      "origin": "local-experiment/q45-study/assets/cardigan-ca_image.png",
+      "original_sha256": "c93e156c85311bb2a762d26d590daf5ba4636710100342cd15e4a537af450fc7",
+      "published_sha256": "c93e156c85311bb2a762d26d590daf5ba4636710100342cd15e4a537af450fc7",
+      "bytes": 419320,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-garment_image.png": {
+      "origin": "local-experiment/q45-study/assets/cardigan-garment_image.png",
+      "original_sha256": "c76553d4b5bd2f9cbc06dcdf3b77d05595172427205a9f998c1250e726ff6519",
+      "published_sha256": "c76553d4b5bd2f9cbc06dcdf3b77d05595172427205a9f998c1250e726ff6519",
+      "bytes": 577880,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/cardigan-python.png": {
+      "origin": "local-experiment/q45-study/assets/cardigan-python.png",
+      "original_sha256": "574ab54cb2d92bdef468cc3c9ba308346898f4660bf29dece21646f36be78646",
+      "published_sha256": "574ab54cb2d92bdef468cc3c9ba308346898f4660bf29dece21646f36be78646",
+      "bytes": 417644,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/cardigan-overview.png": {
+      "origin": "Derived labeled contact sheet; thumbnails only, metrics use unresized originals",
+      "published_sha256": "7ab9b103ea2c99e561ba576f5271ac02cc17b41e416a173d0500f154c4590b52",
+      "bytes": 830225,
+      "source_images": [
+        "reports/comparison-gallery-precision/images/cardigan-ca_image.png",
+        "reports/comparison-gallery-precision/images/cardigan-garment_image.png",
+        "reports/comparison-gallery-precision/images/cardigan-python.png",
+        "reports/comparison-gallery-precision/images/cardigan-bf16.png",
+        "reports/comparison-gallery-precision/images/cardigan-q8_0.png",
+        "reports/comparison-gallery-precision/images/cardigan-q4_0.png",
+        "reports/comparison-gallery-precision/images/cardigan-q4_K.png",
+        "reports/comparison-gallery-precision/images/cardigan-q5_0.png",
+        "reports/comparison-gallery-precision/images/cardigan-q5_K.png",
+        "reports/comparison-gallery-precision/images/cardigan-selected-mixed.png"
+      ]
+    },
+    "reports/comparison-gallery-precision/images/bottoms-bf16.png": {
+      "origin": "local-experiment/q45-study/runs/full-bottoms-bf16-s42/sample.png",
+      "original_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "published_sha256": "11d647151b4bcb665e365a98add09068d1e3cf761784f1f247d4cd6594d405d4",
+      "bytes": 317818,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-q8_0.png": {
+      "origin": "local-experiment/q45-study/runs/full-bottoms-q8_0-s42/sample.png",
+      "original_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801",
+      "published_sha256": "d928c9eb3c08abf067a81ad6f868acbf24dc0b93c19ef578ba48f48e04daa801",
+      "bytes": 325689,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-q4_0.png": {
+      "origin": "local-experiment/q45-study/runs/full-bottoms-q4_0-s42/sample.png",
+      "original_sha256": "4f2fc41859ca811f0ff3a71fde317986c18ae624bb6fd8812d96bd7e3d85c9f6",
+      "published_sha256": "4f2fc41859ca811f0ff3a71fde317986c18ae624bb6fd8812d96bd7e3d85c9f6",
+      "bytes": 491948,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-q4_K.png": {
+      "origin": "local-experiment/q45-study/runs/full-bottoms-q4_K-s42/sample.png",
+      "original_sha256": "296116ba085de67bc034be23bb9d0f27ac64ad97b08bb40c2a3cffba45b86ba7",
+      "published_sha256": "296116ba085de67bc034be23bb9d0f27ac64ad97b08bb40c2a3cffba45b86ba7",
+      "bytes": 455356,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-q5_0.png": {
+      "origin": "local-experiment/q45-study/runs/full-bottoms-q5_0-s42/sample.png",
+      "original_sha256": "6acd34d197417d0edd227d4d6f14c559afff8102dec5b99c36c70b0b731caa35",
+      "published_sha256": "6acd34d197417d0edd227d4d6f14c559afff8102dec5b99c36c70b0b731caa35",
+      "bytes": 384570,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-q5_K.png": {
+      "origin": "local-experiment/q45-study/runs/full-bottoms-q5_K-s42/sample.png",
+      "original_sha256": "e89d0e547cc3071a8ca990c5a21dcd886143fefd5493ce91a0f8d9fc20290c10",
+      "published_sha256": "e89d0e547cc3071a8ca990c5a21dcd886143fefd5493ce91a0f8d9fc20290c10",
+      "bytes": 399944,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-selected-mixed.png": {
+      "origin": "local-experiment/q45-study/runs/full-bottoms-selected-mixed-s42/sample.png",
+      "original_sha256": "84e7edd3a6712f02caab32de4901403b89bba20980598caf096a6d1844c81f25",
+      "published_sha256": "84e7edd3a6712f02caab32de4901403b89bba20980598caf096a6d1844c81f25",
+      "bytes": 352020,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-ca_image.png": {
+      "origin": "local-experiment/q45-study/assets/bottoms-ca_image.png",
+      "original_sha256": "f90b3829e660d1674a3db9f5a4200b398700d7ea9bdf4d48abbb599530556f28",
+      "published_sha256": "f90b3829e660d1674a3db9f5a4200b398700d7ea9bdf4d48abbb599530556f28",
+      "bytes": 380886,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-garment_image.png": {
+      "origin": "local-experiment/q45-study/assets/bottoms-garment_image.png",
+      "original_sha256": "7cdbc5fa0cdb5edfc8154321d3d14b756ac57181c2c2f6883ea0e9c55e720f75",
+      "published_sha256": "7cdbc5fa0cdb5edfc8154321d3d14b756ac57181c2c2f6883ea0e9c55e720f75",
+      "bytes": 109808,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/images/bottoms-python.png": {
+      "origin": "local-experiment/q45-study/assets/bottoms-python.png",
+      "original_sha256": "0acfe49e5fac5904645c7b98473c6af99d0988bb7e7082e8ed118d43be14e1b4",
+      "published_sha256": "0acfe49e5fac5904645c7b98473c6af99d0988bb7e7082e8ed118d43be14e1b4",
+      "bytes": 317816,
+      "unchanged": true
+    },
+    "reports/comparison-gallery-precision/bottoms-overview.png": {
+      "origin": "Derived labeled contact sheet; thumbnails only, metrics use unresized originals",
+      "published_sha256": "808a51f878f3076624eb488166229a39bb2900591055c2d1aa47e1026f578da4",
+      "bytes": 625328,
+      "source_images": [
+        "reports/comparison-gallery-precision/images/bottoms-ca_image.png",
+        "reports/comparison-gallery-precision/images/bottoms-garment_image.png",
+        "reports/comparison-gallery-precision/images/bottoms-python.png",
+        "reports/comparison-gallery-precision/images/bottoms-bf16.png",
+        "reports/comparison-gallery-precision/images/bottoms-q8_0.png",
+        "reports/comparison-gallery-precision/images/bottoms-q4_0.png",
+        "reports/comparison-gallery-precision/images/bottoms-q4_K.png",
+        "reports/comparison-gallery-precision/images/bottoms-q5_0.png",
+        "reports/comparison-gallery-precision/images/bottoms-q5_K.png",
+        "reports/comparison-gallery-precision/images/bottoms-selected-mixed.png"
+      ]
+    }
+  },
+  "scope": "Current study HTML, exact output PNGs, resized labeled contact sheets and path-normalized numerical evidence. No weights, executables or trajectory tensor payloads.",
+  "notice": "reports/NOTICE.md; imagery/adaptations have separate noncommercial attribution/share-alike requirements.",
+  "study_results_sha256": "2a71eabfa277b079ee4b7264c42bf59dd6c95cb42c8401010545c4ff135392a3"
+}

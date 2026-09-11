@@ -6,6 +6,13 @@ claim of production readiness or public quantized/GPU support.
 
 ## Start here
 
+- [Completed Q4/Q5/mixed results](q4-q5-results.md): 18 full generations,
+  18 probe processes, actual memory, latency, direct Q8 differences and repeats.
+- [All-in-one precision HTML](fashn-all-comparisons.html): download/open
+  locally; images/data are embedded, with error maps clearly separated.
+- [GitHub-viewable precision images](comparison-gallery-precision/README.md).
+- [Android host preparation evidence](android-host-preparation.md) and
+  [the ARM64 device handoff](../docs/fashn_arm_transfer.md).
 - [Complete chronological HTML history](fashn-vton-project-history.html):
   initial setup, 38 checkpoints, 42 code excerpts, 22 embedded illustrations,
   all 104 matrix interventions and the original reports. Download/open the
@@ -38,6 +45,13 @@ original Windows environment; adapt paths using
 hashes remain historical evidence. `publication-manifest.json` records
 original and publication-copy hashes so path normalization is not confused
 with a new inference experiment. No images were regenerated for publication.
+
+The newer Q4/Q5 publication has its own
+[`precision-publication-manifest.json`](precision-publication-manifest.json).
+It preserves output PNG bytes and numerical values; the explicitly labeled
+README contact sheets resize thumbnails for display only. The old manifest
+remains the historical publication ledger, not an inventory of subsequent
+source/report additions.
 
 The history's code excerpts are final working-tree snapshots, not invented
 per-checkpoint commits. Old future-tense statements and failed measurements

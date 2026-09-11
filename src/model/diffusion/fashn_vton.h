@@ -54,6 +54,11 @@ struct FashnVTONConfig {
                !contains(suffix, "_mod.") && tensor.n_dims == 2 && tensor.ne[0] % 32 == 0;
     }
 
+    static bool is_diagnostic_quant_type(ggml_type type) {
+        return type == GGML_TYPE_Q8_0 || type == GGML_TYPE_Q4_0 || type == GGML_TYPE_Q5_0 ||
+               type == GGML_TYPE_Q4_K || type == GGML_TYPE_Q5_K;
+    }
+
     static std::string canonical_name(const std::string& name) {
         if (is_model_root(name)) {
             return "model.diffusion_model." + name;
@@ -233,11 +238,12 @@ struct FashnVTONConfig {
                     return fail("FASHN tensor shape mismatch: " + name);
                 }
             }
-            bool q8_matrix = tensor.type == GGML_TYPE_Q8_0 && is_quantizable_matrix(name, tensor);
-            if ((tensor.type != GGML_TYPE_F32 && tensor.type != GGML_TYPE_F16 && tensor.type != GGML_TYPE_BF16 && !q8_matrix) ||
+            bool quantized_matrix = is_diagnostic_quant_type(tensor.type) && is_quantizable_matrix(name, tensor) &&
+                                    tensor.ne[0] % ggml_blck_size(tensor.type) == 0;
+            if ((tensor.type != GGML_TYPE_F32 && tensor.type != GGML_TYPE_F16 && tensor.type != GGML_TYPE_BF16 && !quantized_matrix) ||
                 tensor.is_f8_e4m3 || tensor.is_f8_e5m2 || tensor.is_f64 ||
                 tensor.is_i64 || tensor.is_int8_tensorwise) {
-                return fail("Unsupported FASHN tensor dtype (floating or eligible Q8_0 matrix required): " + name);
+                return fail("Unsupported FASHN tensor dtype (floating or eligible diagnostic quantized matrix required): " + name);
             }
         }
         for (const auto& [name, shape] : expected) {

@@ -37,7 +37,20 @@ inline bool read_fashn_f32_matrices(const std::string& path, std::set<std::strin
     return true;
 }
 
+inline ggml_type fashn_test_matrix_type(const std::string& name) {
+    for (auto type : {GGML_TYPE_F32, GGML_TYPE_F16, GGML_TYPE_BF16, GGML_TYPE_Q8_0,
+                      GGML_TYPE_Q4_0, GGML_TYPE_Q5_0, GGML_TYPE_Q4_K, GGML_TYPE_Q5_K})
+        if (name == ggml_type_name(type))
+            return type;
+    return GGML_TYPE_COUNT;
+}
+
 inline bool assign_fashn_test_matrix_types(String2TensorStorage& tensors, ggml_type matrix_type, const std::set<std::string>& f32_matrices, std::map<std::string, std::string>& matrix_types) {
+    if (matrix_type != GGML_TYPE_F32 && matrix_type != GGML_TYPE_F16 && matrix_type != GGML_TYPE_BF16 &&
+        !FashnVTONConfig::is_diagnostic_quant_type(matrix_type)) {
+        std::cerr << "Unsupported diagnostic matrix type\n";
+        return false;
+    }
     matrix_types.clear();
     for (auto& [name, tensor] : tensors) {
         const auto suffix   = FashnVTONConfig::tensor_suffix(name);
@@ -47,6 +60,10 @@ inline bool assign_fashn_test_matrix_types(String2TensorStorage& tensors, ggml_t
             return false;
         }
         tensor.expected_type = eligible && !f32_matrices.count(suffix) ? matrix_type : GGML_TYPE_F32;
+        if (ggml_is_quantized(tensor.expected_type) && tensor.ne[0] % ggml_blck_size(tensor.expected_type) != 0) {
+            std::cerr << "Matrix row is incompatible with quantization block size: " << name << "\n";
+            return false;
+        }
         if (eligible)
             matrix_types[suffix] = ggml_type_name(tensor.expected_type);
     }

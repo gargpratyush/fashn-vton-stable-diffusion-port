@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FASHN: all precision comparisons</title>
+<style>
+:root{color-scheme:light;--ink:#142839;--muted:#4d6173;--line:#cbd6df;--accent:#006b69;--paper:#fff}
+*{box-sizing:border-box}body{margin:0;background:#eef3f7;color:var(--ink);font:16px/1.55 system-ui,sans-serif}
+header{background:#142839;color:white;padding:38px max(22px,calc((100vw - 1440px)/2))}
+h1{font-size:clamp(28px,4vw,46px);line-height:1.15;margin:8px 0 16px}h2{font-size:26px;margin:0 0 14px}h3{margin:10px 0}
+header p{max-width:950px;color:#d4e3ec}.eyebrow{letter-spacing:.12em;text-transform:uppercase;font-size:12px;font-weight:800}
+nav{display:flex;gap:10px;flex-wrap:wrap}nav a{color:#fff;border:1px solid #647b8c;padding:6px 12px;border-radius:7px}
+main{max-width:1488px;margin:auto;padding:24px}section{background:var(--paper);padding:24px;margin-bottom:24px;border:1px solid var(--line);border-radius:12px;scroll-margin-top:20px}
+a{color:var(--accent)}.muted,small{color:var(--muted)}.notice{padding:14px 18px;background:#fff4d9;border-left:5px solid #bc8000;margin:16px 0}
+.good{background:#e3f4ed}.bad{color:#a52d25}.controls{display:flex;gap:18px;flex-wrap:wrap;align-items:end;margin:20px 0}
+label{font-weight:650;display:block}select,button,input{font:inherit}select,button{border:1px solid #aebfca;background:white;padding:9px 12px;border-radius:6px;max-width:100%}
+button{cursor:pointer}button:hover,button:focus-visible{background:#dcefed}button.primary{background:var(--accent);color:white}
+.controls label{flex:1;min-width:180px}.controls select{display:block;width:100%;margin-top:6px}
+.pair,.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+figure{margin:0;border:1px solid var(--line);background:#f7fafc;border-radius:8px;overflow:hidden}figcaption{padding:12px;background:white;font-weight:650}
+figure img{width:100%;height:auto;display:block}figure .stage{max-height:760px;overflow:auto}figure button{margin:10px}
+.output-tag{display:block;background:#006b69;color:white;padding:7px 12px;font-size:13px;font-weight:800}
+.diagnostic-tag{background:#8c390f}.metrics{display:flex;gap:12px;flex-wrap:wrap;margin:15px 0}.metric{padding:12px 16px;background:#edf4f8;min-width:145px;border-radius:7px}
+.metric b{font-size:22px;display:block}.metric span{font-size:13px;color:var(--muted)}
+.table-wrap{overflow:auto;margin:16px 0}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}thead{background:#edf4f8}tbody tr:hover{background:#f0faf7}td button{font-size:13px;padding:5px 8px}
+details{margin:16px 0;border:1px solid var(--line);border-radius:7px;padding:14px}summary{font-weight:750;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,monospace;max-height:650px;overflow:auto}
+.chart{width:100%;height:auto;display:block;max-height:330px}.chart text{font:12px system-ui;fill:#405467}.bars{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.barrow{display:grid;grid-template-columns:155px 1fr 85px;align-items:center;gap:9px;font-size:13px;margin:9px 0}.bar{height:15px;background:#087d7a;border-radius:3px}
+canvas{max-width:100%;height:auto;display:block;background:#111}.zoom{overflow:auto;max-height:75vh}.zoom img{display:block;max-width:none}dialog{width:min(96vw,1400px);border:1px solid #718a99;border-radius:10px}dialog::backdrop{background:#000b}
+.sliderbox{position:relative;max-width:576px;margin:auto}.sliderbox img{display:block;width:100%}.sliderbox .over{position:absolute;inset:0;clip-path:inset(0 50% 0 0)}.sliderbox .split{position:absolute;top:0;bottom:0;left:50%;border-left:2px solid #ffcc00}
+.legend{font-size:13px;color:#36515d}.hidden{display:none}
+@media(max-width:720px){main{padding:10px}section{padding:16px}.pair,.bars{grid-template-columns:1fr}.barrow{grid-template-columns:120px 1fr 65px}.controls{gap:10px}}
+@media print{nav,.controls,button{display:none}section{break-inside:avoid}body{background:white}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">FASHN VTON 1.5 / Windows x64 CPU / completed experiments</div>
+<h1>Precision, speed, memory &amp; visual differences</h1>
+<p>One offline report for BF16/F32, Q8_0, Q4_0, Q4_K, Q5_0, Q5_K, surgical mixed precision, original PyTorch,
+and historical CPU/BLAS controls. All images and data are embedded: this file can be copied on its own.</p>
+<nav><a href="#visual">Compare images</a><a href="#numbers">Numbers &amp; speed</a><a href="#memory">Memory</a><a href="#history">Historical controls</a><a href="#variance">Variability</a><a href="#method">Method &amp; evidence</a></nav>
+</header>
+<main>
+<noscript><section>This interactive offline report needs JavaScript enabled. Historical source reports remain readable at the bottom.</section></noscript>
+<section>
+<h2>Read this first</h2>
+<div class="notice"><b>Generated images are not error maps.</b> Every normal image below is explicitly labeled OUTPUT.
+Black, noisy, neon-edged maps are <b>amplified pixel differences</b>, not failed image generations.
+They are hidden in a separate diagnostic panel by default.</div>
+<p><b>Scope:</b> these are precision/runtime variants of the same FASHN model, not separate trained models.
+The current study completed 18 full image runs and 18 fresh-process forward probes. Historical runs are shown separately, not pooled into current averages.
+This report does not imply Android, ARM64 or GPU acceptance.</p>
+<div id="headline" class="metrics"></div>
+<p class="muted">No quantized policy passed the strict floating trajectory agreement gates. PSNR is not a perceptual try-on score, and human acceptance has not been recorded.
+Smaller localized garment errors can be important even when global scores are high.</p>
+</section>
+
+<section id="visual">
+<h2>1. Actual generated images, side by side</h2>
+<div class="controls">
+<label>Image pair<select id="case"><option value="cardigan">Cardigan / flat-lay top</option><option value="bottoms">Bottoms / worn trousers</option></select></label>
+<label>Reference image<select id="reference"><option value="q8_0">Q8_0 (current study)</option><option value="bf16">BF16 / F32 (current study)</option><option value="python">Original PyTorch F32 (historical)</option></select></label>
+<label>Candidate output<select id="candidate"></select></label>
+</div>
+<details><summary>Show prepared person and garment inputs</summary><div id="inputs" class="pair"></div></details>
+<div class="pair">
+<figure><span class="output-tag">OUTPUT - REFERENCE</span><figcaption id="left-title"></figcaption><div class="stage"><img id="left" alt="Reference generated try-on"></div><button id="left-zoom">Open reference at full resolution</button></figure>
+<figure><span class="output-tag">OUTPUT - CANDIDATE</span><figcaption id="right-title"></figcaption><div class="stage"><img id="right" alt="Candidate generated try-on"></div><button id="right-zoom">Open candidate at full resolution</button></figure>
+</div>
+<p id="comparison-scope" class="muted"></p><div id="pair-metrics" class="metrics"></div>
+<details id="wipe"><summary>Overlay comparison: drag the split (actual outputs, no amplification)</summary>
+<p>Left of the yellow line: reference. Right: candidate. Both have identical dimensions and alignment.</p>
+<div class="sliderbox"><img id="wipe-base" alt="Candidate output"><img class="over" id="wipe-over" alt="Reference output overlay"><div class="split" id="wipe-line"></div></div>
+<label for="split">Reference coverage <input id="split" type="range" min="0" max="100" value="50"></label></details>
+<details id="diagnostics"><summary>Diagnostic error map &amp; worst local crop - NOT generated outputs</summary>
+<div class="notice"><b>ERROR MAP:</b> absolute candidate-minus-reference pixel error multiplied by 16, then clipped to 255.
+Bright contours and colored noise are deliberately amplified differences. The map changes with the reference selector.</div>
+<div class="pair"><figure><span class="output-tag diagnostic-tag">ERROR MAP - ABSOLUTE DIFFERENCE x16</span><canvas id="error-map"></canvas></figure>
+<figure><span class="output-tag">ACTUAL OUTPUT PATCHES - REFERENCE LEFT / CANDIDATE RIGHT</span><canvas id="local-pair"></canvas><figcaption id="local-caption"></figcaption></figure></div>
+</details>
+<details id="trajectory"><summary>Per-step floating trajectory drift (current native candidates only)</summary>
+<p id="trajectory-scope"></p><div id="trajectory-chart"></div><div id="trajectory-table" class="table-wrap"></div>
+</details>
+<h3>All seven current-study outputs for this case</h3>
+<p class="muted">These are actual generated crops. Click Compare to load a candidate above. Full canvas includes the original padding.</p>
+<div id="gallery" class="cards"></div>
+</section>
+
+<section id="numbers">
+<h2>2. Numerical difference, latency &amp; measured memory</h2>
+<p id="table-reference"></p>
+<p class="muted">One seed-42 run per case/policy. Sampling seconds include modulation preparation and trajectory recording.
+Process wall includes native startup/shutdown. These are prepared-input measurements: preprocessing, HTTP and model downloads are excluded.</p>
+<div id="current-table" class="table-wrap"></div>
+<h3>Current-study two-case summary</h3><p class="muted">Arithmetic means across cardigan and bottoms, not repeated-run uncertainty estimates.
+Memory here is the mean of each run's process peak, not simultaneous memory consumption.</p>
+<div id="aggregate-table" class="table-wrap"></div><div id="bars" class="bars"></div>
+<details><summary>Metric definitions and interpreting dB</summary>
+<p><b>RMSE:</b> root mean squared channel error on the unresized 576x768 crop, using RGB values 0..255.
+<b>MAE:</b> mean absolute channel error. <b>PSNR:</b> 20 log10(255/RMSE), larger is closer.
+Exact matches have infinite PSNR, displayed as "Exact", not zero dB.
+A 6.02 dB reduction means approximately twice the RMSE.</p>
+<p><b>Error variance:</b> population variance of signed channel errors, not latency variance.
+<b>Pixels &gt;10:</b> percentage whose maximum absolute RGB channel error exceeds 10.
+<b>Worst 64x64:</b> highest mean squared error on a 32-pixel-stride scan including the right/bottom boundaries;
+not an exhaustive pixel-stride search and not a garment segmentation metric.</p>
+<p>Background and unchanged person pixels can dominate global scores. PSNR does not evaluate garment identity,
+fit, realism, texture preservation or whether either output is a good try-on.</p></details>
+</section>
+
+<section id="memory">
+<h2>3. Where the memory goes</h2>
+<p>All current runs use ready GGUF files with <b>zero runtime weight conversions and no source mmap</b>.
+About 996 MiB of modulation/conditioning weights are retired before denoising. Activations and protected F32 parameters remain:
+4-bit weight storage does not mean a 4x process-memory reduction.</p>
+<div id="weight-table" class="table-wrap"></div>
+<p class="muted">GiB = 2^30 bytes; MiB = 2^20 bytes. Working set and private commit overlap: <b>never add them</b>.
+Active assigned weights are sampled after modulation retirement; arena/cache values are observed high-water allocations.
+These logical allocation peaks may not coincide and do not account for every library-private allocation.</p>
+</section>
+
+<section id="history">
+<h2>4. Original Python, BLAS and earlier Q8 mixed precision</h2>
+<div class="notice">Historical measurements, not newly rerun or controlled against the current study.
+Python uses batched CFG/default SDPA without intermediate trajectory recording; its sampling interval includes PIL conversion.
+The old cardigan Python measurement tracked its launcher, so its memory is marked unavailable rather than reporting an implausibly low value.</div>
+<div id="history-table" class="table-wrap"></div>
+<h3>Earlier pre-optimization native runs</h3><p class="muted">Preserved to explain why old Q8 memory figures were larger.
+These used different loading/lifetime behavior; do not treat them as current quantization costs.</p>
+<div id="legacy-table" class="table-wrap"></div>
+<details><summary>Other tested precision paths without a matched full-image comparison</summary>
+<p>F32/F16/BF16 conversion, direct F16/BF16 arithmetic, weight-only upcasts and single-matrix restoration probes were tested historically.
+They are not invented as full-image benchmark rows here. Synthetic 34-capture tests, conversion tests, and photographic full generations answer different questions.</p>
+<p>The source reports at the bottom preserve the individual-matrix sensitivity study, mixed-policy controls,
+loader memory investigation, BLAS experiments and their limitations. SDXS cat smoke tests are a different model/task and are not try-on quality comparisons.</p>
+</details>
+</section>
+
+<section id="variance">
+<h2>5. Repeatability, seed sensitivity &amp; surgical restoration</h2>
+<h3>Forward timing variability: three fresh processes per policy</h3>
+<p class="muted">Each process performs two fixed-state conditional t=0 forwards: first and warm.
+These timings are not full-generation latency predictions. SD is sample standard deviation; CV is SD/mean.</p>
+<div id="probe-table" class="table-wrap"></div><div id="repeat-summary"></div>
+<div id="repeat-table" class="table-wrap"></div>
+<h3>Seed 43: held-out descriptive comparison</h3>
+<p class="muted">Only BF16 and Q5_K were run at seed 43. These compare with each other at the same seed, not against seed-42 Q8.
+Two seeds do not establish population quality or robustness.</p>
+<div id="seed-pair" class="pair"></div><div id="seed-metrics" class="metrics"></div>
+<h3>Q5_K with four matrices restored to original F32</h3>
+<p>The prior Q8-sensitive matrices at single_blocks 12, 11, 8 and 14 (linear1.weight) were restored.
+They were a hypothesis, not a new exhaustive Q5_K sensitivity ranking.</p>
+<div id="mixed-table" class="table-wrap"></div>
+<p><b>Important:</b> aggregate error improves in both cases, but the cardigan's matched worst region becomes slightly worse.
+An improvement in a global average is not an unconditional visual improvement.</p>
+</section>
+
+<section id="method">
+<h2>6. Scope, provenance &amp; downloadable data</h2>
+<p>Host: Windows x64 CPU, AMD EPYC 7763 exposure, 16 inference threads, 2 load threads, no compute GPU.
+Current native protocol: 576x864 canvas, 20 steps, CFG 1.5, shift 1.5, skip last CFG step, seed 42 unless labeled,
+F32 flash attention, strict fused GELU, bounded modulation cache, ready weights, mmap off, one model process at a time.
+BF16 describes selected weight storage with F32 operands; quantized matrices execute directly.</p>
+<p>Floating gates remain relative L2 &lt;= 0.001 at every recorded image and guided velocity, initial-noise max error &lt;= 1e-6,
+schedule max error &lt;= 1e-7. Pixel-table reference changes do not change trajectory gate provenance.
+Seed-43 BF16's self-control is not an independent oracle. Quantized public inference remains disabled.</p>
+<p>The report verifies the current run artifact hashes and recomputes cropped PNG metrics directly.
+Historical provenance is identified separately. It does not rerun inference or establish human approval.
+The interrupted final repeat was archived and rerun; incomplete work is not counted in timing statistics.</p>
+<button id="download-data">Download report metrics &amp; provenance JSON (without embedded images)</button>
+<details><summary>Evidence file hashes</summary><pre id="evidence"></pre></details>
+<h3>Historical source reports and notices</h3>
+<p class="muted">Original text is preserved as historical evidence; old interim conclusions and memory figures are not current-study claims.
+Image/model attribution and evaluation restrictions remain applicable.</p>
+@@APPENDICES@@
+</section>
+</main>
+<dialog id="zoom"><button id="close-zoom">Close</button><h3 id="zoom-title"></h3><div class="zoom"><img id="zoom-image" alt="Full-resolution generated output"></div></dialog>
+<script id="report-data" type="application/json">@@DATA@@</script>
+<script>
+"use strict";
+const D=JSON.parse(document.getElementById("report-data").textContent), $=id=>document.getElementById(id);
+const fmt=(v,n=2)=>v===null||v===undefined?"N/A":Number(v).toFixed(n), gib=v=>v==null?"N/A":fmt(v/2**30,3);
+const psnr=m=>m.exact?"Exact":fmt(m.psnr_db,2), esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mean=a=>a.reduce((s,v)=>s+v,0)/a.length, current=D.rows.filter(r=>r.group==="current");
+function table(headers,rows){return "<table><thead><tr>"+headers.map(h=>"<th>"+esc(h)+"</th>").join("")+"</tr></thead><tbody>"+rows.map(row=>"<tr>"+row.map(c=>"<td>"+c+"</td>").join("")+"</tr>").join("")+"</tbody></table>"}
+function metric(label,value){return '<div class="metric"><b>'+esc(value)+'</b><span>'+esc(label)+'</span></div>'}
+function rowBy(id){const r=D.rows.find(r=>r.id===id);if(!r)throw Error("Missing row "+id);return r}
+function refRow(c,ref){return rowBy(ref==="python"?"python-"+c:`full-${c}-${ref}-s42`)}
+function pairMetric(m){return metric("Crop RMSE (0..255)",fmt(m.rmse,4))+metric("Crop PSNR (dB)",psnr(m))+metric("Mean absolute error",fmt(m.mae,4))+metric("Max channel error",fmt(m.max_abs,0))+metric("Pixels >10 levels",fmt(m.pixels_above_10_percent,3)+"%")+metric("Worst scanned 64x64 PSNR",psnr(m.local))}
+function figure(r){return '<figure><span class="output-tag">ACTUAL GENERATED OUTPUT</span><figcaption>'+esc(r.label)+'</figcaption><img loading="lazy" src="'+D.images[r.sample]+'" alt="'+esc(r.label)+' generated crop"><button data-compare="'+esc(r.id)+'">Compare</button><button data-full="'+esc(r.id)+'">Full canvas</button></figure>'}
+function openZoom(src,title){$("zoom-image").src=src;$("zoom-title").textContent=title;$("zoom").showModal()}
+$("close-zoom").onclick=()=>$("zoom").close();
+let active=null,reference=null,renderVersion=0;
+function populate(){
+ const c=$("case").value;
+ const choices=D.rows.filter(r=>r.case===c&&r.seed===42&&r.group!=="repeat-seed");
+ $("candidate").innerHTML=choices.map(r=>'<option value="'+r.id+'">'+esc(r.label)+(r.group==="historical"?" [historical]":"")+'</option>').join("");
+ $("candidate").value=`full-${c}-q4_K-s42`;refresh();
+}
+function refresh(){
+ const c=$("case").value,ref=$("reference").value;active=rowBy($("candidate").value);reference=refRow(c,ref);
+ $("left").src=D.images[reference.sample];$("right").src=D.images[active.sample];
+ $("left-title").textContent=reference.label+" | seed 42 | "+reference.source;
+ $("right-title").textContent=active.label+" | seed 42 | "+active.source;
+ $("comparison-scope").textContent="All pixel metrics below use this reference and the actual unresized crop. "+active.sampling_scope+".";
+ $("pair-metrics").innerHTML=pairMetric(active.comparisons[ref]);
+ $("wipe-base").src=D.images[active.sample];$("wipe-over").src=D.images[reference.sample];
+ $("left-zoom").onclick=()=>openZoom(D.images[reference.sample],reference.label+" - actual output");
+ $("right-zoom").onclick=()=>openZoom(D.images[active.sample],active.label+" - actual output");
+ $("inputs").innerHTML=Object.entries(D.inputs[c]).map(([k,v])=>'<figure><figcaption>PREPARED INPUT - '+(k==="ca_image"?"PERSON":"GARMENT")+'</figcaption><img loading="lazy" src="'+D.images[v]+'" alt="Prepared '+esc(k)+'"></figure>').join("");
+ $("gallery").innerHTML=current.filter(r=>r.case===c).map(figure).join("");
+ $("table-reference").textContent="Selected case: "+c+". Pixel reference: "+reference.label+". RMSE / MAE / max are channel levels 0..255; higher PSNR is closer.";
+ const headers=["Policy","Sampling s","Wall s","Peak WS GiB","Private GiB","RMSE","PSNR dB","MAE","Error variance","Max","Pixels >10 %","Worst64 PSNR","Trajectory gate*"];
+ function cells(r){const m=r.comparisons[ref];return [esc(r.label),fmt(r.sampling,1),fmt(r.wall,1),gib(r.ws),gib(r.private),fmt(m.rmse,4),psnr(m),fmt(m.mae,4),fmt(m.error_population_variance,4),fmt(m.max_abs,0),fmt(m.pixels_above_10_percent,3),psnr(m.local),r.gate===null?"Not evaluated here":r.gate?"PASS":"FAIL"]}
+ $("current-table").innerHTML=table(headers,current.filter(r=>r.case===c).map(cells))+"<p class='muted'>*Trajectory gates use saved floating references, not the image reference selector. See per-step panel.</p>";
+ $("history-table").innerHTML=table([...headers.slice(0,-1),"Memory / timing caveat"],D.rows.filter(r=>r.case===c&&r.group==="historical").map(r=>[...cells(r).slice(0,-1),esc(r.memory_note)]));
+ renderTrajectory();renderVersion++;if($("diagnostics").open)renderDiagnostics(renderVersion);
+}
+$("case").onchange=populate;$("reference").onchange=refresh;$("candidate").onchange=refresh;
+$("split").oninput=()=>{const x=$("split").value;$("wipe-over").style.clipPath=`inset(0 ${100-x}% 0 0)`;$("wipe-line").style.left=x+"%"};
+document.addEventListener("click",e=>{const compare=e.target.closest("[data-compare]"),full=e.target.closest("[data-full]");
+ if(compare){$("candidate").value=compare.dataset.compare;refresh();$("visual").scrollIntoView({behavior:"smooth"})}
+ if(full){const r=rowBy(full.dataset.full);openZoom(D.images[r.full],r.label+" - full 576x864 canvas")}});
+async function decoded(key){const im=new Image();im.src=D.images[key];await im.decode();return im}
+async function renderDiagnostics(version){
+ const a=active,b=reference,m=a.comparisons[$("reference").value];
+ const [left,right]=await Promise.all([decoded(b.sample),decoded(a.sample)]);
+ if(version!==renderVersion)return;
+ const canvas=$("error-map"),ctx=canvas.getContext("2d",{willReadFrequently:true});canvas.width=left.naturalWidth;canvas.height=left.naturalHeight;
+ ctx.drawImage(left,0,0);const l=ctx.getImageData(0,0,canvas.width,canvas.height);
+ ctx.drawImage(right,0,0);const r=ctx.getImageData(0,0,canvas.width,canvas.height);
+ for(let i=0;i<r.data.length;i+=4){for(let c=0;c<3;c++)r.data[i+c]=Math.min(255,16*Math.abs(r.data[i+c]-l.data[i+c]));r.data[i+3]=255}
+ ctx.putImageData(r,0,0);
+ const p=$("local-pair"),pc=p.getContext("2d");p.width=512;p.height=256;pc.imageSmoothingEnabled=false;const z=m.region;
+ pc.drawImage(left,z.x,z.y,z.width,z.height,0,0,256,256);pc.drawImage(right,z.x,z.y,z.width,z.height,256,0,256,256);
+ $("local-caption").textContent=`Matched region x=${z.x}, y=${z.y}, ${z.width}x${z.height}; RMSE ${fmt(m.local.rmse,3)}, PSNR ${psnr(m.local)} dB. Actual patches enlarged 4x, not error maps.`;
+}
+$("diagnostics").ontoggle=()=>{if($("diagnostics").open)renderDiagnostics(renderVersion).catch(showError)};
+function showError(e){const p=document.createElement("p");p.className="notice";p.textContent="Report error: "+e.message;$("visual").prepend(p);console.error(e)}
+function renderTrajectory(){
+ if(!active.trajectory){$("trajectory-scope").textContent="No per-step comparison loaded for this historical row.";$("trajectory-chart").innerHTML="";$("trajectory-table").innerHTML="";return}
+ const t=active.trajectory,steps=t.steps;
+ $("trajectory-scope").textContent="Saved gate reference: "+active.gate_reference+". This does not follow the pixel reference selector. Initial max error: "+t.initial_noise.max_abs+"; schedule max error: "+t.schedule_max_abs+".";
+ const max=Math.max(.001,...steps.flatMap(s=>[s.image.relative_l2,s.guided_velocity.relative_l2])),y=v=>220-190*v/max,x=i=>55+680*i/19;
+ const points=k=>steps.map((s,i)=>`${x(i)},${y(s[k].relative_l2)}`).join(" ");
+ $("trajectory-chart").innerHTML=`<svg class="chart" viewBox="0 0 780 260" role="img" aria-label="Per-step relative L2 error">
+ <line x1="55" y1="220" x2="735" y2="220" stroke="#879baa"/><line x1="55" y1="30" x2="55" y2="220" stroke="#879baa"/>
+ <line x1="55" y1="${y(.001)}" x2="735" y2="${y(.001)}" stroke="#ad3928" stroke-dasharray="5 4"/>
+ <polyline points="${points("image")}" fill="none" stroke="#007975" stroke-width="2"/>
+ <polyline points="${points("guided_velocity")}" fill="none" stroke="#6744ba" stroke-width="2"/>
+ <text x="5" y="30">${max.toExponential(1)}</text><text x="30" y="225">0</text><text x="55" y="246">Step 1</text><text x="690" y="246">Step 20</text></svg><p class="legend">Green: updated image; purple: guided velocity; dashed red: 0.001 gate. Linear y-axis.</p>`;
+ $("trajectory-table").innerHTML=table(["Step","Image relative L2","Velocity relative L2","Image gate","Velocity gate"],steps.map(s=>[s.index+1,s.image.relative_l2.toExponential(5),s.guided_velocity.relative_l2.toExponential(5),s.image.passed?"PASS":"FAIL",s.guided_velocity.passed?"PASS":"FAIL"]));
+}
+function summaries(){
+ const policies=[...new Set(current.map(r=>r.policy))],averages=policies.map(p=>{const rows=current.filter(r=>r.policy===p);return {p,label:rows[0].label,time:mean(rows.map(r=>r.sampling)),wall:mean(rows.map(r=>r.wall)),ws:mean(rows.map(r=>r.ws)),private:mean(rows.map(r=>r.private)),rmse:mean(rows.map(r=>r.comparisons.bf16.rmse))}});
+ const bf=averages.find(r=>r.p==="bf16"),q4=averages.find(r=>r.p==="q4_K");
+ $("headline").innerHTML=metric("Current full generations",18)+metric("Current probe processes",18)+metric("Q4_K lower mean peak WS",fmt(100*(1-q4.ws/bf.ws),1)+"%")+metric("Q4_K less sampling time",fmt(100*(1-q4.time/bf.time),1)+"%");
+ $("aggregate-table").innerHTML=table(["Policy","Mean sampling min","Mean wall min","Mean peak WS GiB","Mean private GiB","Less time vs BF16 %","Lower WS vs BF16 %","Mean crop RMSE vs BF16"],averages.map(r=>[esc(r.label),fmt(r.time/60),fmt(r.wall/60),gib(r.ws),gib(r.private),fmt(100*(1-r.time/bf.time),1),fmt(100*(1-r.ws/bf.ws),1),fmt(r.rmse,4)]));
+ $("bars").innerHTML=[["Sampling time (minutes)","time",60],["Peak working set (GiB)","ws",2**30]].map(([title,key,unit])=>"<div><h3>"+title+"</h3>"+averages.map(r=>'<div class="barrow"><span>'+esc(r.p)+'</span><div><div class="bar" style="width:'+100*r[key]/Math.max(...averages.map(a=>a[key]))+'%"></div></div><b>'+fmt(r[key]/unit,2)+'</b></div>').join("")+"</div>").join("");
+ $("weight-table").innerHTML=table(["Policy","GGUF bytes","File GiB","Active weights MiB","Arena peak MiB","Cache peak MiB","Conversion scratch bytes"],policies.map(p=>{const r=current.find(r=>r.policy===p),h=r.high_water;return [esc(r.label),r.file_bytes,gib(r.file_bytes),fmt(r.logical.weights.assigned_payload_bytes/2**20,3),fmt(h.runtime_buffer_bytes/2**20,3),fmt(h.modulation_cache_bytes/2**20,3),h.conversion_scratch_bytes]}));
+ $("probe-table").innerHTML=table(["Policy","n","First mean s","Warm mean s","Warm SD s","Warm CV %","Warm min / max s","Mean peak WS GiB","Mean private GiB","Velocity rel L2 samples"],Object.entries(D.probes).map(([p,s])=>[esc(p),s.warm_forward_seconds.n,fmt(s.first_forward_seconds.mean,3),fmt(s.warm_forward_seconds.mean,3),fmt(s.warm_forward_seconds.sample_stddev,3),fmt(100*s.warm_forward_seconds.coefficient_of_variation,2),fmt(s.warm_forward_seconds.min,3)+" / "+fmt(s.warm_forward_seconds.max,3),gib(s.peak_working_set_bytes.mean),gib(s.sampled_peak_private_bytes.mean),s.velocity_relative_l2.map(x=>x.toExponential(3)).join(", ")]));
+ const rep=D.repeatability,rr=[rowBy("full-cardigan-q5_K-s42"),...D.rows.filter(r=>r.id.startsWith("repeat-"))];
+ $("repeat-summary").innerHTML="<h3>Three complete Q5_K cardigan runs, same seed</h3><p>Mean sampling "+fmt(rep.sampling_seconds.mean/60,2)+" min; sample SD "+fmt(rep.sampling_seconds.sample_stddev,2)+" s; CV "+fmt(100*rep.sampling_seconds.coefficient_of_variation,2)+"%. Both repeats have "+(rep.same_seed_comparisons.every(x=>x.float.max_abs===0&&x.pixels.exact)?"exactly identical final floats and PNG pixels":"measured differences; inspect raw data")+".</p>";
+ $("repeat-table").innerHTML=table(["Run","Sampling s","Wall s","Peak WS GiB","Private GiB"],rr.map(r=>[esc(r.id),fmt(r.sampling,3),fmt(r.wall,3),gib(r.ws),gib(r.private)]));
+ const seeds=D.rows.filter(r=>r.seed===43);$("seed-pair").innerHTML=seeds.map(r=>'<figure><span class="output-tag">ACTUAL OUTPUT - SEED 43</span><figcaption>'+esc(r.label)+'</figcaption><img loading="lazy" src="'+D.images[r.sample]+'" alt="'+esc(r.label)+' seed 43 output"></figure>').join("");
+ $("seed-metrics").innerHTML=pairMetric(seeds.find(r=>r.policy==="q5_K").comparisons.bf16);
+ $("mixed-table").innerHTML=table(["Case","Q5_K global RMSE","Mixed global RMSE","Q5_K local RMSE","Mixed local RMSE","Matched region"],Object.entries(D.mixed).map(([c,m])=>[c,fmt(m.unmixed_global.rmse,4),fmt(m.mixed_global.rmse,4),fmt(m.unmixed_local.rmse,4),fmt(m.mixed_local.rmse,4),`x=${m.matched_region.x}, y=${m.matched_region.y}, 64x64`]));
+ $("legacy-table").innerHTML=table(["Historical run","Process wall s","Peak WS GiB","Private GiB","Matrix counts"],Object.entries(D.legacy.runs).map(([name,r])=>[esc(name),fmt(r.wall_seconds,2),gib(r.peak_working_set_bytes),gib(r.sampled_peak_private_bytes),esc(JSON.stringify(r.actual_matrix_counts))]));
+ $("evidence").textContent=JSON.stringify(D.evidence,null,2);
+}
+$("download-data").onclick=()=>{const {images,...data}=D,url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"})),a=document.createElement("a");a.href=url;a.download="fashn-all-comparisons.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+try{summaries();populate();document.documentElement.dataset.reportReady="true"}catch(e){showError(e)}
+</script>
+</body>
+</html>

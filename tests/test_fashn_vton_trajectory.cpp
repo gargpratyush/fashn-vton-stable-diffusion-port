@@ -5,15 +5,17 @@
 #include "core/rng_mt19937.hpp"
 #include "fashn_test_runner.h"
 #include "fashn_memory_profile.h"
+#include "fashn_noise_fixture.h"
 #include "json.hpp"
 #include "runtime/fashn_vton_sampling.h"
 
 int main(int argc, char** argv) {
     if (argc < 11) {
         std::cerr << "Usage: test-fashn-vton-trajectory checkpoint conditions output steps cfg shift skip seed category threads"
-                     " [--matrix-type f32|bf16|f16|q8_0] [--upcast-matrices] [--f32-matrices policy.json]"
+                     " [--matrix-type f32|bf16|f16|q8_0|q4_0|q5_0|q4_K|q5_K] [--upcast-matrices] [--f32-matrices policy.json]"
                      " [--mmap on|off] [--load-threads N] [--load-only | --probe-forwards N]"
-                     " [--no-record] [--memory-profile] [--classify-pages] [--precompute-modulations] [--modulation-cache-mib N] [--fused-gelu] [--backend CPU|BLAS]\n";
+                     " [--no-record] [--memory-profile] [--classify-pages] [--precompute-modulations] [--modulation-cache-mib N] [--fused-gelu] [--backend CPU|BLAS]"
+                     " [--initial-noise fixture.safetensors]\n";
         return 2;
     }
     try {
@@ -23,12 +25,19 @@ int main(int argc, char** argv) {
         bool precompute_modulations = false;
         bool fused_gelu = false;
         std::string backend_name = "CPU";
+        std::string initial_noise_path;
         int modulation_cache_mib = 128;
         int load_threads = 0, probe_forwards = 0;
         std::set<std::string> f32_matrices;
         for (int i = 11; i < argc; ++i) {
             const std::string option = argv[i];
-            if (option == "--backend" && i + 1 < argc) {
+            if (option == "--initial-noise" && i + 1 < argc) {
+                if (!initial_noise_path.empty())
+                    throw std::invalid_argument("Specify initial noise only once");
+                initial_noise_path = argv[++i];
+                if (initial_noise_path.empty())
+                    throw std::invalid_argument("Initial noise path must not be empty");
+            } else if (option == "--backend" && i + 1 < argc) {
                 backend_name = argv[++i];
                 if (backend_name != "CPU" && backend_name != "BLAS")
                     throw std::invalid_argument("Trajectory supports only CPU or diagnostic BLAS with CPU fallback");
@@ -66,21 +75,14 @@ int main(int argc, char** argv) {
                     return 2;
             } else if (option == "--matrix-type" && i + 1 < argc) {
                 const std::string type = argv[++i];
-                if (type == "f32")
-                    matrix_type = GGML_TYPE_F32;
-                else if (type == "bf16")
-                    matrix_type = GGML_TYPE_BF16;
-                else if (type == "f16")
-                    matrix_type = GGML_TYPE_F16;
-                else if (type == "q8_0")
-                    matrix_type = GGML_TYPE_Q8_0;
-                else
+                matrix_type = fashn_test_matrix_type(type);
+                if (matrix_type == GGML_TYPE_COUNT)
                     throw std::invalid_argument("Unknown diagnostic matrix type");
             } else {
                 throw std::invalid_argument("Unknown or incomplete diagnostic option");
             }
         }
-        const bool upcast_matrices = explicit_upcast || matrix_type != GGML_TYPE_Q8_0;
+        const bool upcast_matrices = explicit_upcast || !ggml_is_quantized(matrix_type);
         if (backend_name == "BLAS" && !upcast_matrices)
             throw std::invalid_argument("BLAS requires F32 matrix computation; direct Q8 arithmetic is not supported");
         FashnVTONSamplingParams sampling{std::stoi(argv[4]), std::stof(argv[5]), std::stof(argv[6]), std::stoi(argv[7])};
@@ -94,6 +96,11 @@ int main(int argc, char** argv) {
             throw std::invalid_argument("Modulation precomputation requires --mmap off and an inference mode");
         if (modulation_cache_mib > 128 || (!precompute_modulations && modulation_cache_mib != 128))
             throw std::invalid_argument("Modulation cache must be enabled and bounded to 1..128 MiB");
+        if (load_only && !initial_noise_path.empty())
+            throw std::invalid_argument("Initial noise is not used in load-only mode");
+        sd::Tensor<float> imported_noise;
+        if (!initial_noise_path.empty())
+            imported_noise = load_fashn_noise_fixture(initial_noise_path);
         const std::filesystem::path output(argv[3]);
         if (std::filesystem::exists(output))
             throw std::invalid_argument("Use a new output directory");
@@ -147,7 +154,9 @@ int main(int argc, char** argv) {
             FashnVTONDiffusionExtra conditions{&ca, &garment, &pose, &garment_pose, &category};
             MT19937RNG rng;
             rng.manual_seed(seed);
-            sd::Tensor<float> noise({576, 864, 3, 1}, rng.randn(576 * 864 * 3));
+            sd::Tensor<float> noise = imported_noise.empty()
+                ? sd::Tensor<float>({576, 864, 3, 1}, rng.randn(576 * 864 * 3))
+                : std::move(imported_noise);
             if (recording && !save_capture((output / "initial.safetensors").string(), {{"noise", noise}}))
                 return 1;
             notify("conditions_ready");
@@ -214,6 +223,7 @@ int main(int argc, char** argv) {
             {"recorded_trajectory", recording && !load_only && !probe_forwards},
             {"memory_profile", memory_profile}, {"page_classification", classify_pages}};
         manifest["precompute_modulations"] = precompute_modulations;
+        manifest["noise_source"] = initial_noise_path.empty() ? "cpu_rng" : "imported_fixture";
         manifest["backend"] = backend_name;
         manifest["backend_description"] = backend_description;
         manifest["matrix_backends"] = matrix_backends;

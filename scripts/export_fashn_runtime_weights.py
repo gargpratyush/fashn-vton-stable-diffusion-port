@@ -8,14 +8,16 @@ from benchmark_fashn_vton import measure_command
 from export_fashn_vton_reference import sha256
 from run_fashn_quality import write_report
 
+MATRIX_TYPES = ("bf16", "q8_0", "q4_0", "q5_0", "q4_K", "q5_K")
+
 
 def conversion_rules(matrix_map, matrix_type, policy=None):
     types = matrix_map["matrix_types"]
     if len(types) != 104 or any(not re.fullmatch(r"[A-Za-z0-9_.]+[.]weight", name) or ".." in name
                                 for name in types):
         raise ValueError("Expected exactly 104 safe native matrix names")
-    if matrix_type not in ("bf16", "q8_0"):
-        raise ValueError("Runtime export supports BF16 or selective Q8")
+    if matrix_type not in MATRIX_TYPES:
+        raise ValueError("Unsupported runtime export matrix type")
     restored = []
     if policy is not None:
         if set(policy) != {"f32_matrices"} or not isinstance(policy["f32_matrices"], list):
@@ -26,8 +28,8 @@ def conversion_rules(matrix_map, matrix_type, policy=None):
         if not set(restored).issubset(types):
             raise ValueError("Unknown or protected restored matrix")
     selected = sorted(set(types) - set(restored)) if matrix_type == "bf16" else sorted(restored)
-    # Float export otherwise affects every tensor, unlike selective Q8 export.
-    default_type, rule_type = ("f32", "bf16") if matrix_type == "bf16" else ("q8_0", "f32")
+    # Floating export otherwise affects protected tensors; quantized export preserves them.
+    default_type, rule_type = ("f32", "bf16") if matrix_type == "bf16" else (matrix_type, "f32")
     rule = "(?:^|[.])(?:" + "|".join(re.escape(name) for name in selected) + ")$=" + rule_type
     return default_type, rule if selected else ""
 
@@ -80,7 +82,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("cli", "verifier", "checkpoint", "matrix-map", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
-    parser.add_argument("--matrix-type", choices=("bf16", "q8_0"), required=True)
+    parser.add_argument("--matrix-type", choices=MATRIX_TYPES, required=True)
     parser.add_argument("--f32-matrices", type=Path)
     parser.add_argument("--reuse-file", type=Path)
     parser.add_argument("--threads", type=int, default=2)

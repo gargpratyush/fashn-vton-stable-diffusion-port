@@ -1,214 +1,164 @@
-# FASHN VTON 1.5 native port
+# FASHN VTON 1.5 native C++ port
 
-This repository extends [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp)
-with native FASHN VTON 1.5 virtual try-on: a dedicated transformer, exact
-sampler, prepared-input C API/CLI, optional native pose/parser preparation,
-and a local asynchronous server with a standalone `/try-on` interface.
+Run local virtual try-on with a native implementation of
+[FASHN VTON 1.5](https://github.com/fashn-AI/fashn-vton-1.5), built on
+[stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) and GGML.
+This is not a C++ wrapper around Python inference: the transformer, conditioning,
+sampling and prepared-input inference execute natively.
 
-**Start here:** [build and run](docs/fashn_quickstart.md) |
-[complete API and developer guide](docs/fashn_vton.md) |
-[project history and experimental reports](reports/README.md).
+**[Build and run](docs/fashn_quickstart.md)** |
+**[API and developer guide](docs/fashn_vton.md)** |
+**[Comparison results](reports/q4-q5-results.md)** |
+**[Project history](reports/README.md)** |
+**[ARM64 / Android plan](docs/fashn_android_plan.md)**
 
-The validated deployment path is **floating CPU inference**. BF16/F16
-matrix storage with F32 computation is supported. Q8/mixed precision and
-OpenBLAS are diagnostic experiments, not public inference support; GPU
-validation remains blocked by the evaluation machine's hardware.
-Model weights, SDK binaries, virtual environments and large trajectory
-tensors are **not included**. Initialize the pinned Git submodules when cloning.
-Report images have separate attribution/licensing requirements; see
-[report notices](reports/NOTICE.md).
+## What this project implements
 
-The original upstream documentation follows. Its generic model/backend
-capabilities must not be interpreted as FASHN-specific validation.
+- Native FASHN transformer and pixel-space sampler, including CFG, RNG,
+  category conditioning and the released 576x864 canvas. No VAE or text encoder.
+- Prepared-input C API and CLI, optional Python-free pose/parser preprocessing,
+  and a local asynchronous HTTP server with a standalone `/try-on` interface.
+- Lower-memory floating inference: BF16/F16 matrix storage with F32 computation,
+  runtime-ready GGUF, bounded modulation caching with weight retirement,
+  F32 flash attention and opt-in strict fused GELU.
+- Diagnostic Q8/Q4/Q5 and selective mixed precision, with exact conversion
+  verification, complete image trajectories, memory profiling and reproducible
+  numerical/visual comparisons.
+- ARM64 transfer/integrity tooling and an Android CPU cross-build, with separate
+  device acceptance checkpoints.
 
----
+**Validated deployment path: Windows x64 floating CPU inference.**
+Quantized inference and OpenBLAS remain diagnostic-only; public generation
+rejects quantized checkpoints. Android binaries have been cross-built, not
+accepted through device inference. A separate Windows ARM64 SDXS smoke test
+does not establish FASHN ARM64 support. GPU execution is unvalidated here.
 
-<p align="center">
-  <img src="./assets/logo.png" width="360x">
-</p>
+## Actual try-on comparisons
 
-# stable-diffusion.cpp
+The contact sheets show **actual outputs, not amplified error maps**.
+Top row: prepared person, prepared garment, original Python, native BF16/F32,
+Q8. Bottom row: Q4_0, Q4_K, Q5_0, Q5_K, and Q5_K with four original-F32 matrices.
+Thumbnails are resized only for display; metrics use the original unresized crops.
 
-<div align="center">
-<a href="https://trendshift.io/repositories/9714" target="_blank"><img src="https://trendshift.io/api/badge/repositories/9714" alt="leejet%2Fstable-diffusion.cpp | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
+### Cardigan
 
-Diffusion model(SD,Flux,Wan,...) inference in pure C/C++
+![Cardigan: prepared inputs, original Python and native precision outputs](reports/comparison-gallery-precision/cardigan-overview.png)
 
-***Note that this project is under active development. \
-API and command-line option may change frequently.***
+### Bottoms
 
-## 🔥Important News
+![Bottoms: prepared inputs, original Python and native precision outputs](reports/comparison-gallery-precision/bottoms-overview.png)
 
-* **2026/08/20** 🚀 stable-diffusion.cpp now supports **LTX-2.5**
-* **2026/08/04** 🚀 stable-diffusion.cpp adds **Day-1 support for MiniMax-H3**
-* **2026/06/25** 🚀 stable-diffusion.cpp now supports **Krea2**
-* **2026/06/04** 🚀 stable-diffusion.cpp now supports **Ideogram4**
-* **2026/05/31** 🚀 stable-diffusion.cpp now supports **PiD**
-* **2026/05/27** 🚀 stable-diffusion.cpp now supports **Lens**
-* **2026/05/17** 🚀 stable-diffusion.cpp now supports **LTX-2.3**
-* **2026/04/11** 🚀 stable-diffusion.cpp now uses a brand-new embedded web UI.  
-* **2026/01/18** 🚀 stable-diffusion.cpp now supports **FLUX.2-klein**  
-* **2025/12/01** 🚀 stable-diffusion.cpp now supports **Z-Image**  
-* **2025/11/30** 🚀 stable-diffusion.cpp now supports **FLUX.2-dev**  
-* **2025/10/13** 🚀 stable-diffusion.cpp now supports **Qwen-Image-Edit / Qwen-Image-Edit 2509**  
-* **2025/10/12** 🚀 stable-diffusion.cpp now supports **Qwen-Image**  
-* **2025/09/14** 🚀 stable-diffusion.cpp now supports **Wan2.1 Vace**  
-* **2025/09/06** 🚀 stable-diffusion.cpp now supports **Wan2.1 / Wan2.2**  
+**[Download/open the all-in-one interactive HTML report](reports/fashn-all-comparisons.html).**
+Use GitHub's download button, then open the file locally; GitHub displays HTML
+as source. The approximately 25 MB file embeds all images/data and works offline.
+It includes side-by-side/overlay comparisons, selectable Q8/BF16/Python references,
+local error crops, PSNR/RMSE, memory, latency, per-step drift and historical controls.
+Error maps are hidden by default and explicitly labeled.
 
-## Features
+Image fixtures and adaptations have separate attribution and
+**noncommercial/share-alike** requirements: read [report notices](reports/NOTICE.md).
+Numerical agreement is not proof of garment fidelity or a commercial-use license.
 
-- Plain C/C++ implementation based on [ggml](https://github.com/ggml-org/ggml), working in the same way as [llama.cpp](https://github.com/ggml-org/llama.cpp)
-- Super lightweight and without external dependencies
-- Supported models
-  - Image Models
-    - [SD1.x, SD2.x, SD-Turbo](./docs/sd.md)
-    - [SDXL, SDXL-Turbo](./docs/sd.md)
-    - [Some SD1.x and SDXL distilled models](./docs/distilled_sd.md)
-    - [SD3/SD3.5](./docs/sd3.md)
-    - [FLUX.1-dev/FLUX.1-schnell](./docs/flux.md)
-    - [FLUX.2-dev/FLUX.2-klein](./docs/flux2.md)
-    - [Lens](./docs/lens.md)
-    - [Chroma](./docs/chroma.md)
-    - [Chroma1-Radiance](./docs/chroma_radiance.md)
-    - [Qwen Image](./docs/qwen_image.md)
-    - [PiD](./docs/pid.md)
-    - [LongCat Image](./docs/longcat_image.md)
-    - [Z-Image](./docs/z_image.md)
-    - [MiniT2I](./docs/minit2i.md)
-    - [Ovis-Image](./docs/ovis_image.md)
-    - [Anima](./docs/anima.md)
-    - [ERNIE-Image](./docs/ernie_image.md)
-    - [Boogu Image](./docs/boogu_image.md)
-    - [Krea2](./docs/krea2.md)
-    - [Mage-Flow](./docs/mage_flow.md)
-    - [SeFi-Image](./docs/sefi_image.md)
-    - [HiDream-O1-Image](./docs/hidream_o1_image.md)
-    - [Ideogram4](./docs/ideogram4.md)
-  - [Image Edit Models](./docs/edit.md)
-    - [FLUX.1-Kontext-dev](./docs/kontext.md)
-    - [Qwen Image Edit series](./docs/qwen_image_edit.md)
-    - [LongCat Image Edit](./docs/longcat_image.md)
-    - [Boogu Image Edit](./docs/boogu_image.md)
-    - [Mage-Flow-Edit](./docs/mage_flow.md#image-editing)
-  - Video Models
-    - [Wan2.1/Wan2.2](./docs/wan.md)
-    - [MiniMax-H3](./docs/minimax_h3.md)
-    - [LTX-2.3/LTX-2.5](./docs/ltx2.md)
-    - [HunyuanVideo 1.5](./docs/hunyuan_video.md)
-    - [LingBot-Video](./docs/lingbot_video.md)
-  - [PhotoMaker](./docs/photo_maker.md) support.
-  - [IP-Adapter](./docs/ip_adapter.md) support (SD 1.5 and SDXL, including Plus)
-  - Control Net support with SD 1.5
-  - [ADetailer](./docs/adetailer.md)
-  - LoRA support, same as [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Features#lora)
-  - Latent Consistency Models support (LCM/LCM-LoRA)
-  - Faster and memory efficient latent decoding with [TAESD](./docs/taesd.md)
-  - Upscale images generated with [ESRGAN](./docs/esrgan.md)
-- Supported backends
-  - CPU (AVX, AVX2 and AVX512 support for x86 architectures)
-  - CUDA
-  - Vulkan
-  - Metal
-  - OpenCL
-  - SYCL
-- Supported weight formats
-  - Pytorch checkpoint (`.ckpt` or `.pth` or `.pt`)
-  - Safetensors (`.safetensors`)
-  - GGUF (`.gguf`)
-- Convert mode supports converting model weights to `.gguf` or `.safetensors`
-- Supported platforms
-    - Linux
-    - Mac OS
-    - Windows
-    - Android (via Termux, [Local Diffusion](https://github.com/rmatif/Local-Diffusion))
-- Flash Attention for memory usage optimization
-- Negative prompt
-- [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) style tokenizer (not all the features, only token weighting for now)
-- VAE tiling processing for reduce memory usage
-- Sampling method
-    - `Euler A`
-    - `Euler`
-    - `Heun`
-    - `DPM2`
-    - `DPM++ 2M`
-    - [`DPM++ 2M v2`](https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/8457)
-    - `DPM++ 2S a`
-    - `ER-SDE`
-    - [`LCM`](https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/13952)
-- Cross-platform reproducibility
-    - `--rng cuda`, default, consistent with the `stable-diffusion-webui GPU RNG`
-    - `--rng cpu`, consistent with the `comfyui RNG`
-- Embedds generation parameters into png output as webui-compatible text string
+## Measured latency, memory and image differences
 
-## Quick Start
+Current study: Windows x64 CPU, AMD EPYC 7763 exposure, 16 inference threads,
+20 steps, CFG 1.5, seed 42, 576x864 canvas / 576x768 displayed crop.
+Same prepared inputs, ready weights, F32 flash attention, modulation cache,
+strict fused GELU and recorded trajectories for every current policy.
 
-### Get the sd executable
+| Policy | Mean sampling time | Mean peak working set | Crop RMSE vs BF16: cardigan / bottoms |
+|---|---:|---:|---:|
+| BF16 storage / F32 compute | 38.7 min | 2.01 GiB | Reference |
+| Q8_0 | 30.5 min | 1.40 GiB | 1.59 / 0.42 |
+| Q4_0 | 34.1 min | 1.07 GiB | 3.49 / 1.79 |
+| Q4_K | 30.0 min | 1.07 GiB | 3.00 / 1.24 |
+| Q5_0 | 37.1 min | 1.15 GiB | 2.42 / 0.95 |
+| Q5_K | 36.5 min | 1.16 GiB | 2.28 / 1.02 |
+| Q5_K + 4 original F32 matrices | 35.9 min | 1.30 GiB | 2.23 / 0.87 |
 
-- Download pre-built binaries from the [releases page](https://github.com/leejet/stable-diffusion.cpp/releases)
-- Or build from source by following the [build guide](./docs/build.md)
+Times and working sets are arithmetic means across two cases, not confidence
+intervals. Sampling includes recording and modulation preparation; raw-image
+preprocessing and HTTP overhead are excluded. RMSE uses byte-channel levels
+0..255, lower is closer. Working set and private commit overlap and must not
+be added; both are reported separately in the detailed results.
 
-### Download model weights
+Q4_K reduced mean peak working set by about **47%** and mean sampling time by
+about **22%** versus the current floating control. Q5_K had the lowest average
+cropped error among the four lower-bit formats. Three same-seed Q5_K runs
+produced identical final floats/pixels, with **2.58% sampling-time CV**.
 
-- download weights(.ckpt or .safetensors or .gguf). For example
-    - Stable Diffusion v1.5 from https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5 
+These are diagnostic results, **not quantized quality acceptance**. All
+quantized policies fail the unchanged strict floating trajectory gates.
+Four-matrix restoration improves aggregate error but slightly worsens the
+cardigan's matched worst-error region. Original Python was faster in the
+historical CPU observations; those are labeled separately, not pooled into
+the current study or presented as controlled speedup claims.
 
-    ```sh
-    curl -L -O https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors
-    ```
+See [full measured results and caveats](reports/q4-q5-results.md) and
+[the sequential experiment plan](docs/fashn_q4_q5_plan.md).
 
-### Generate an image with just one command
+## Build and run
 
-```sh
-./bin/sd-cli -m ../models/v1-5-pruned-emaonly.safetensors -p "a lovely cat"
+Clone with the pinned submodules:
+
+```powershell
+git clone --recurse-submodules https://github.com/gargpratyush/fashn-vton-stable-diffusion-port.git
+Set-Location fashn-vton-stable-diffusion-port
 ```
 
-***For detailed command-line arguments, check out [cli doc](./examples/cli/README.md).***
+From a Visual Studio 2022 developer shell with CMake:
 
-## Performance
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+  -DSD_BUILD_TESTS=ON -DSD_BUILD_EXAMPLES=ON `
+  -DSD_FASHN_PREPROCESS=OFF -DSD_SERVER_BUILD_FRONTEND=OFF `
+  -DGGML_BLAS=OFF -DGGML_LLAMAFILE=OFF
+cmake --build build --config Release --parallel
+```
 
-If you want to improve performance or reduce VRAM/RAM usage, please refer to [performance guide](./docs/performance.md).
-For runtime and parameter backend placement, see the [backend selection guide](./docs/backend.md).
+Obtain the pinned [FASHN weights](https://huggingface.co/fashn-ai/fashn-vton-1.5/tree/7720683168567eb5a2a4c67f15116c6e29c83ded)
+and create a prepared-input manifest as described in
+[the quickstart](docs/fashn_quickstart.md). A prepared manifest contains
+normalized-input PNG assets and pose maps; raw photos are not interchangeable.
 
-## More Guides
+```powershell
+.\build\bin\Release\sd-cli.exe --mode try_on `
+  --diffusion-model .\models\model.safetensors `
+  --try-on-inputs .\prepared\manifest.json `
+  --steps 20 --cfg-scale 1.5 --flow-shift 1.5 `
+  --skip-cfg-last-n-steps 1 --seed 42 --rng cpu `
+  --type bf16 --diffusion-fa -t 16 -o result.png
+```
 
-- [Backend selection](./docs/backend.md)
-- [RPC](./docs/rpc.md)
-- [LoRA](./docs/lora.md)
-- [LCM/LCM-LoRA](./docs/lcm.md)
-- [Docker](./docs/docker.md)
-- [Quantization and GGUF](./docs/quantization_and_gguf.md)
-- [INT8 convrot safetensors](./docs/int8_convrot.md)
-- [Inference acceleration via caching](./docs/caching.md)
+The quickstart covers optional native preprocessing, the local web server,
+memory optimizations and development dependencies. Python is used for
+reference experiments and tooling, not the deployed prepared-input runtime.
 
-## Bindings
+## ARM64 and Android
 
-These projects wrap `stable-diffusion.cpp` for easier use in other languages/frameworks.
+The Android ARM64 CPU CLI and diagnostics were cross-built on the x64 host
+using NDK r28c. ELF architecture/alignment and host correctness controls
+were checked; no Android device inference was completed.
 
-* Golang (non-cgo): [seasonjs/stable-diffusion](https://github.com/seasonjs/stable-diffusion)
-* Golang (cgo): [Binozo/GoStableDiffusion](https://github.com/Binozo/GoStableDiffusion)
-* Golang (non-cgo): [l8bloom/gosd](https://github.com/l8bloom/gosd)
-* C#: [DarthAffe/StableDiffusion.NET](https://github.com/DarthAffe/StableDiffusion.NET)
-* Python: [william-murray1204/stable-diffusion-cpp-python](https://github.com/william-murray1204/stable-diffusion-cpp-python)
-* Rust: [newfla/diffusion-rs](https://github.com/newfla/diffusion-rs)
-* Flutter/Dart: [rmatif/Local-Diffusion](https://github.com/rmatif/Local-Diffusion)
+Use [the transfer runbook](docs/fashn_arm_transfer.md) and
+[host preparation evidence](reports/android-host-preparation.md).
+A Git checkout supplies code, **not weights or prepared reference fixtures**.
+The frozen private ARM transfer bundle targets a specific source baseline;
+do not overlay it blindly onto a newer checkout.
 
-## UIs
+## Reproducibility and licensing
 
-These projects use `stable-diffusion.cpp` as a backend for their image generation.
+- [Complete implementation and experiment history](reports/fashn-vton-project-history.html).
+- [Historical memory/latency optimization results](reports/memory-and-latency-optimization-results.md).
+- [Original Python and Q8/mixed study](reports/quantization-and-upstream-comparison.md).
+- [Current study evidence](reports/evidence/q45-study/results.json) and
+  [publication provenance](reports/precision-publication-manifest.json).
+- [Contribution guidelines](CONTRIBUTING.md), [core code license](LICENSE),
+  [image/model notices](reports/NOTICE.md) and
+  [native preprocessing notices](examples/fashn-preprocess/NOTICE.txt).
 
-- [GIMP Plugins](https://github.com/themanyone/gimp-plugins)
-- [Jellybox](https://jellybox.com)
-- [Stable Diffusion GUI](https://github.com/fszontagh/sd.cpp.gui.wx)
-- [Stable Diffusion CLI-GUI](https://github.com/piallai/stable-diffusion.cpp)
-- [Local Diffusion](https://github.com/rmatif/Local-Diffusion)
-- [sd.cpp-webui](https://github.com/daniandtheweb/sd.cpp-webui)
-- [LocalAI](https://github.com/mudler/LocalAI)
-- [Neural-Pixel](https://github.com/Luiz-Alcantara/Neural-Pixel)
-- [KoboldCpp](https://github.com/LostRuins/koboldcpp)
-
-## Contributors
-
-Thank you to all the people who have already contributed to stable-diffusion.cpp!
-
-[![Contributors](https://contrib.rocks/image?repo=leejet/stable-diffusion.cpp)](https://github.com/leejet/stable-diffusion.cpp/graphs/contributors)
+Weights, executables, SDKs, virtual environments and full trajectory tensor
+payloads are not distributed in this repository. The optional human parser
+has a separate **noncommercial research/evaluation-only** license and requires
+explicit consent. Upstream stable-diffusion.cpp/GGML code and attribution
+remain intact; this fork's landing page describes only the FASHN project.
