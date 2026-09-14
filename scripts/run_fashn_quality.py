@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageOps
 
 from benchmark_fashn_vton import benchmark
 from export_fashn_vton_reference import sha256, validate_sampling
+from fashn_artifacts import write_report
 
 REVISION = "999bdbe81e6008a3f5749af7c1e0b0fa3d21b48e"
 REPOSITORY = "https://github.com/Zheng-Chong/CatVTON"
@@ -39,12 +40,6 @@ def cases(assets, source):
         ("worn-top-free", female, worn, "tops", "model", False, 42),
         ("flat-top-seed43", male, top, "tops", "flat-lay", False, 43),
     ]
-
-
-def write_report(path, value):
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    temporary.replace(path)
 
 
 def validate_assets(directory, download):

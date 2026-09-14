@@ -8,10 +8,37 @@ import numpy as np
 from PIL import Image
 
 from build_fashn_comparison_report import Report, compare_images, portable, script_json
-from package_fashn_precision_reports import contact_sheet
+from package_fashn_precision_reports import contact_sheet, install_publication
+from fashn_artifacts import sha256
+from fashn_report_policy import policy_labels
+from unittest.mock import patch
 
 
 class ComparisonReportTests(unittest.TestCase):
+    def test_selection_drives_labels_and_required_rows(self):
+        for selected in ("q4_K", "q5_K"):
+            state = {"selection": selected, "weights": {"selected-mixed": {
+                "matrix_type": selected, "policy": {"f32_matrices": ["one", "two"]}}},
+                "jobs": {name: {} for name in (f"full-cardigan-{selected}-s42", f"full-cardigan-{selected}-s43",
+                                               f"repeat-cardigan-{selected}-1", f"repeat-cardigan-{selected}-2")}}
+            self.assertEqual(policy_labels(state)["selected-mixed"], selected.upper() + " + 2 original F32 matrices")
+            state["weights"]["selected-mixed"]["matrix_type"] = "q8_0"
+            with self.assertRaises(ValueError):
+                policy_labels(state)
+
+    def test_failed_publication_has_no_success_ledger(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo, stage = root / "repo", root / "stage"
+            for path in (repo, stage):
+                (path / "reports").mkdir(parents=True)
+                (path / "reports/precision-publication-manifest.json").write_text("{}")
+            (stage / "reports/output.json").write_text("new")
+            manifest = {"files": {"reports/output.json": {"published_sha256": sha256(stage / "reports/output.json")}}}
+            with patch.object(Path, "replace", side_effect=OSError("disk full")), self.assertRaises(OSError):
+                install_publication(repo, stage, manifest)
+            self.assertFalse((repo / "reports/precision-publication-manifest.json").exists())
+
     def test_exact_and_known_pixel_errors(self):
         a = np.full((64, 64, 3), 100, dtype=np.uint8)
         exact = compare_images(a, a)

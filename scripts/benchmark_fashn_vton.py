@@ -6,12 +6,14 @@ from contextlib import nullcontext
 import ctypes
 from ctypes import wintypes
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
 import time
 
 from export_fashn_vton_reference import sha256, validate_sampling
+from fashn_process_state import process_identity, record_process, identity_active
 
 
 class MemoryCounters(ctypes.Structure):
@@ -131,8 +133,8 @@ def command_for(args, output):
     return command
 
 
-def measure_command(command, log_path, timeout=14400, timeline_path=None):
-    if os.name != "nt" or timeout < 1:
+def measure_command(command, log_path, timeout=14400, timeline_path=None, process_path=None):
+    if os.name != "nt" or not math.isfinite(timeout) or timeout < 1:
         raise ValueError("Command measurement requires Windows and a positive timeout")
     peak = private = samples = 0
     last_sample_time = 0.
@@ -148,11 +150,26 @@ def measure_command(command, log_path, timeout=14400, timeline_path=None):
         launched_command = [command[0], str(Path(__file__).with_name("fashn_measurement_worker.py")), *command[1:]]
     start = time.perf_counter()
     monitored_pid = None
+    owner = process_identity(os.getpid()) if process_path is not None else None
+    child = None
+    worker_identity = None
+    if process_path is not None:
+        record_process(process_path, "pending", owner)
     with log_path.open("w", encoding="utf-8") as log, \
             (timeline_path.open("x", encoding="utf-8") if timeline_path is not None else nullcontext()) as timeline:
-        process = subprocess.Popen(launched_command, stdout=log, stderr=subprocess.STDOUT, env=environment)
+        if process_path is not None:
+            record_process(process_path, "launching", owner)
+        try:
+            process = subprocess.Popen(launched_command, stdout=log, stderr=subprocess.STDOUT, env=environment)
+        except OSError:
+            if process_path is not None:
+                record_process(process_path, "exited", owner)
+            raise
         memory = None
         try:
+            if process_path is not None:
+                child = process_identity(process.pid)
+                record_process(process_path, "running", owner, child)
             if not python:
                 monitored_pid = process.pid
                 memory = ProcessMemory(monitored_pid)
@@ -164,6 +181,9 @@ def measure_command(command, log_path, timeout=14400, timeline_path=None):
                             (monitored_pid != process.pid and identity["parent_pid"] != process.pid)):
                         raise ValueError("Worker is not the launched interpreter or its direct child")
                     memory = ProcessMemory(monitored_pid)
+                    if process_path is not None:
+                        worker_identity = process_identity(monitored_pid)
+                        record_process(process_path, "running", owner, child, worker_identity)
                     acknowledgement = worker_file.with_suffix(".ack.json")
                     temporary = acknowledgement.with_suffix(".tmp")
                     temporary.write_text(json.dumps({"pid": monitored_pid}), encoding="utf-8")
@@ -187,6 +207,8 @@ def measure_command(command, log_path, timeout=14400, timeline_path=None):
                 time.sleep(.2)
         finally:
             try:
+                if python and worker_identity and identity_active(worker_identity) and process.poll() is not None:
+                    terminate_owned_tree(process.pid)
                 if process.poll() is None:
                     if python:
                         terminate_owned_tree(process.pid)
@@ -196,6 +218,8 @@ def measure_command(command, log_path, timeout=14400, timeline_path=None):
             finally:
                 if memory is not None:
                     memory.close()
+            if process_path is not None:
+                record_process(process_path, "exited", owner, child, worker_identity)
     if python and memory is None:
         raise RuntimeError("Python worker did not register; memory measurement is unavailable")
     return {"command": command, "exit_code": process.returncode, "wall_seconds": time.perf_counter() - start,

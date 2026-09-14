@@ -31,3 +31,6 @@ preview.png
 CLAUDE.local.md
 .agents/
 .codex/
+# Local publication lock and staging, never publication payloads.
+.fashn-publication.lock
+.fashn-publication-*/

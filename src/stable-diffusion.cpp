@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/api_boundary.h"
 #include "core/ggml_extend_backend.h"
 #include "core/ggml_graph_cut.h"
 #include "core/ggml_runner.h"
@@ -20,11 +21,11 @@
 #include "core/rng_mt19937.hpp"
 #include "core/rng_philox.hpp"
 #include "core/util.h"
+#include "model/diffusion/fashn_vton_model.h"
 #include "model_loader.h"
 #include "model_manager.h"
+#include "runtime/fashn_try_on.h"
 #include "stable-diffusion.h"
-#include "model/diffusion/fashn_vton_model.h"
-#include "runtime/fashn_vton_sampling.h"
 
 #include "conditioning/conditioner.hpp"
 #include "core/backend_fit.h"
@@ -3974,6 +3975,7 @@ void sd_vid_gen_params_init(sd_vid_gen_params_t* sd_vid_gen_params) {
 
 struct sd_ctx_t {
     StableDiffusionGGML* sd = nullptr;
+    std::atomic<bool> try_on_failed{false};
 };
 
 static bool sd_version_supports_video_generation(SDVersion version) {
@@ -3985,32 +3987,30 @@ static bool sd_version_supports_image_generation(SDVersion version) {
 }
 
 sd_ctx_t* new_sd_ctx(const sd_ctx_params_t* sd_ctx_params) {
-    sd_ctx_t* sd_ctx = (sd_ctx_t*)malloc(sizeof(sd_ctx_t));
-    if (sd_ctx == nullptr) {
-        return nullptr;
-    }
-
-    sd_ctx->sd = new StableDiffusionGGML();
-    if (sd_ctx->sd == nullptr) {
-        free(sd_ctx);
-        return nullptr;
-    }
-
-    if (!sd_ctx->sd->init(sd_ctx_params)) {
-        delete sd_ctx->sd;
-        sd_ctx->sd = nullptr;
-        free(sd_ctx);
-        return nullptr;
-    }
-    return sd_ctx;
+    return sd_api_boundary("new_sd_ctx", static_cast<sd_ctx_t*>(nullptr), [&]() -> sd_ctx_t* {
+        if (sd_ctx_params == nullptr) {
+            LOG_ERROR("new_sd_ctx requires initialized parameters");
+            return nullptr;
+        }
+        auto context = std::make_unique<sd_ctx_t>();
+        auto model   = std::make_unique<StableDiffusionGGML>();
+        if (!model->init(sd_ctx_params)) {
+            return nullptr;
+        }
+        context->sd = model.release();
+        return context.release();
+    });
 }
 
 void free_sd_ctx(sd_ctx_t* sd_ctx) {
+    if (sd_ctx == nullptr) {
+        return;
+    }
     if (sd_ctx->sd != nullptr) {
         delete sd_ctx->sd;
         sd_ctx->sd = nullptr;
     }
-    free(sd_ctx);
+    delete sd_ctx;
 }
 
 SD_API void sd_cancel_generation(sd_ctx_t* sd_ctx, enum sd_cancel_mode_t mode) {
@@ -4072,7 +4072,7 @@ SD_API bool sd_ctx_supports_image_generation(const sd_ctx_t* sd_ctx) {
 }
 
 SD_API bool sd_ctx_supports_try_on(const sd_ctx_t* sd_ctx) {
-    return sd_ctx != nullptr && sd_ctx->sd != nullptr && sd_version_is_fashn_vton(sd_ctx->sd->version);
+    return sd_ctx != nullptr && !sd_ctx->try_on_failed && sd_ctx->sd != nullptr && sd_version_is_fashn_vton(sd_ctx->sd->version);
 }
 
 SD_API void sd_try_on_params_init(sd_try_on_params_t* params) {
@@ -4091,19 +4091,27 @@ SD_API void sd_try_on_params_init(sd_try_on_params_t* params) {
     params->sample_count = 1;
 }
 
-static sd::Tensor<float> fashn_prepared_image(const sd_image_t& image) {
-    sd::Tensor<float> tensor({576, 864, image.channel, 1});
-    for (uint32_t c = 0; c < image.channel; ++c) {
-        for (size_t pixel = 0; pixel < 576 * 864; ++pixel) {
-            tensor.values()[c * 576 * 864 + pixel] = image.data[pixel * image.channel + c] / 127.5f - 1.f;
-        }
-    }
-    return tensor;
+SD_API bool generate_try_on(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params, sd_image_t** images_out, int* num_images_out) {
+    return generate_try_on_with_callbacks(sd_ctx, params, nullptr, images_out, num_images_out);
 }
 
-SD_API bool generate_try_on(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params,
-                            sd_image_t** images_out, int* num_images_out) {
-    return generate_try_on_with_callbacks(sd_ctx, params, nullptr, images_out, num_images_out);
+static bool generate_try_on_impl(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params, const sd_try_on_callbacks_t* callbacks, sd_image_t** images_out, int* num_images_out) {
+    if (!sd_ctx_supports_try_on(sd_ctx)) {
+        LOG_ERROR("generate_try_on requires a healthy FASHN context");
+        return false;
+    }
+    auto& sd = *sd_ctx->sd;
+    FashnTryOnRuntime runtime{*sd.diffusion_model, *sd.rng, sd.n_threads,
+                              sd.fashn_modulation_cache_enabled, sd.fashn_modulation_cache_bytes,
+                              [&] { sd.reset_cancel_flag(); },
+                              [&] { return sd.get_cancel_flag(); },
+                              [&] {
+                                  sd.diffusion_model->runner_end();
+                                  return sd.model_manager->unregister_param_tensors("Diffusion model") &&
+                                         sd.register_runner_params("Diffusion model", sd.diffusion_model, SDBackendModule::DIFFUSION) &&
+                                         sd.model_manager->validate_registered_tensors();
+                              }};
+    return generate_fashn_try_on(runtime, params, callbacks, images_out, num_images_out);
 }
 
 SD_API bool generate_try_on_with_callbacks(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params,
@@ -4115,143 +4123,11 @@ SD_API bool generate_try_on_with_callbacks(sd_ctx_t* sd_ctx, const sd_try_on_par
     if (num_images_out != nullptr) {
         *num_images_out = 0;
     }
-    if (!sd_ctx_supports_try_on(sd_ctx) || params == nullptr || images_out == nullptr ||
-        num_images_out == nullptr || params->struct_size < sizeof(sd_try_on_params_t)) {
-        LOG_ERROR("generate_try_on requires a FASHN context, initialized parameters, and output pointers");
-        return false;
-    }
-    if (callbacks != nullptr && callbacks->struct_size < sizeof(sd_try_on_callbacks_t)) {
-        LOG_ERROR("Invalid FASHN callback structure size");
-        return false;
-    }
-    FashnVTONSamplingParams sampling{params->steps, params->cfg, params->shift, params->skip_cfg_last_n_steps};
-    if (!sampling.validate() || params->category < SD_TRY_ON_TOPS || params->category > SD_TRY_ON_ONE_PIECES ||
-        params->sample_count < 1 || params->sample_count > 4) {
-        LOG_ERROR("Invalid FASHN sampling/category/sample count (supported count: 1..4)");
-        return false;
-    }
-    const sd_image_t* images[] = {&params->ca_image, &params->garment_image, &params->person_pose, &params->garment_pose};
-    for (int i = 0; i < 4; ++i) {
-        if (images[i]->data == nullptr || images[i]->width != 576 || images[i]->height != 864 ||
-            images[i]->channel != static_cast<uint32_t>(i < 2 ? 3 : 1)) {
-            LOG_ERROR("FASHN prepared inputs must be 576x864, RGB/RGB/grayscale/grayscale");
-            return false;
+    return sd_api_boundary("generate_try_on", false, [&]() { return generate_try_on_impl(sd_ctx, params, callbacks, images_out, num_images_out); }, [&]() noexcept {
+        if (sd_ctx != nullptr) {
+            sd_ctx->try_on_failed = true;
         }
-    }
-    int crop_w = params->crop_width;
-    int crop_h = params->crop_height;
-    if (crop_w == 0 && crop_h == 0 && params->crop_x == 0 && params->crop_y == 0) {
-        crop_w = 576;
-        crop_h = 864;
-    }
-    if (crop_w < 1 || crop_h < 1 || crop_w > 576 || crop_h > 864 ||
-        params->crop_x < 0 || params->crop_y < 0 ||
-        params->crop_x > 576 - crop_w || params->crop_y > 864 - crop_h) {
-        LOG_ERROR("FASHN crop must be a positive rectangle inside the prepared canvas");
-        return false;
-    }
-    auto& sd = *sd_ctx->sd;
-    sd.reset_cancel_flag();
-    auto is_cancelled = [&]() {
-        return sd.get_cancel_flag() == SD_CANCEL_ALL ||
-               (callbacks != nullptr && callbacks->cancelled != nullptr && callbacks->cancelled(callbacks->data));
-    };
-    if (is_cancelled()) {
-        LOG_INFO("FASHN request cancelled before preparation");
-        return false;
-    }
-    auto ca = fashn_prepared_image(params->ca_image);
-    auto garment = fashn_prepared_image(params->garment_image);
-    auto pose = fashn_prepared_image(params->person_pose);
-    auto garment_pose = fashn_prepared_image(params->garment_pose);
-    sd::Tensor<int32_t> category({1}, {static_cast<int32_t>(params->category)});
-    FashnVTONDiffusionExtra condition{&ca, &garment, &pose, &garment_pose, &category};
-    sd.rng->manual_seed(params->seed);
-    const size_t per_sample = 576 * 864 * 3;
-    auto noise = sd.rng->randn(static_cast<uint32_t>(per_sample * params->sample_count));
-    auto* cached_runner = sd.fashn_modulation_cache_enabled ? dynamic_cast<FashnVTONRunner*>(sd.diffusion_model.get()) : nullptr;
-    struct EndModulationRequest {
-        FashnVTONRunner* runner;
-        ~EndModulationRequest() {
-            if (runner)
-                runner->finish_modulation_request();
-        }
-    } end_modulation_request{cached_runner};
-    if (sd.fashn_modulation_cache_enabled) {
-        if (!cached_runner) {
-            LOG_ERROR("FASHN modulation caching requires the FASHN runner");
-            return false;
-        }
-        auto pairs = fashn_vton_modulation_pairs(sampling, static_cast<int>(params->category));
-        if (pairs.empty())
-            return false;
-        if (!cached_runner->prepare_modulation_request(sd.n_threads, pairs, [&sd, cached_runner]() {
-                cached_runner->runner_end();
-                return sd.model_manager->unregister_param_tensors("Diffusion model") &&
-                       sd.register_runner_params("Diffusion model", sd.diffusion_model, SDBackendModule::DIFFUSION) &&
-                       sd.model_manager->validate_registered_tensors();
-            }, sd.fashn_modulation_cache_bytes, is_cancelled))
-            return false;
-    }
-    std::vector<sd::Tensor<float>> completed;
-    for (int sample = 0; sample < params->sample_count; ++sample) {
-        if (sd.get_cancel_flag() == SD_CANCEL_NEW_LATENTS) {
-            break;
-        }
-        sd::Tensor<float> initial({576, 864, 3, 1},
-                                  std::vector<float>(noise.begin() + sample * per_sample,
-                                                     noise.begin() + (sample + 1) * per_sample));
-        auto start = std::chrono::steady_clock::now();
-        auto output = sample_fashn_vton(*sd.diffusion_model, sd.n_threads, initial, condition, sampling,
-                                       is_cancelled,
-                                       [&](int step, int total) {
-                                           auto cb = callbacks != nullptr ? callbacks->progress : sd_get_progress_callback();
-                                           if (cb != nullptr) {
-                                               float seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - start).count();
-                                               cb(sample * total + step, params->sample_count * total, seconds / step,
-                                                  callbacks != nullptr ? callbacks->data : sd_get_progress_callback_data());
-                                           }
-                                       });
-        if (output.empty() || is_cancelled()) {
-            return false;
-        }
-        completed.push_back(std::move(output));
-    }
-    if (completed.empty() || is_cancelled()) {
-        LOG_INFO("FASHN request cancelled before any samples completed");
-        return false;
-    }
-    auto results = static_cast<sd_image_t*>(calloc(completed.size(), sizeof(sd_image_t)));
-    if (results == nullptr) {
-        LOG_ERROR("Cannot allocate FASHN result array");
-        return false;
-    }
-    for (size_t sample = 0; sample < completed.size(); ++sample) {
-        results[sample] = {static_cast<uint32_t>(crop_w), static_cast<uint32_t>(crop_h), 3, nullptr};
-        results[sample].data = static_cast<uint8_t*>(malloc(static_cast<size_t>(crop_w) * crop_h * 3));
-        if (results[sample].data == nullptr) {
-            LOG_ERROR("Cannot allocate FASHN RGB output");
-            free_sd_images(results, static_cast<int>(completed.size()));
-            return false;
-        }
-        for (int row = 0; row < crop_h; ++row) {
-            for (int col = 0; col < crop_w; ++col) {
-                for (int c = 0; c < 3; ++c) {
-                    size_t source = c * 576 * 864 + (row + params->crop_y) * 576 + col + params->crop_x;
-                    float pixel = std::clamp((completed[sample].values()[source] + 1.f) * 0.5f, 0.f, 1.f);
-                    results[sample].data[(row * crop_w + col) * 3 + c] = static_cast<uint8_t>(pixel * 255.f);
-                }
-            }
-        }
-    }
-    if (is_cancelled()) {
-        LOG_INFO("FASHN request cancelled during output conversion");
-        free_sd_images(results, static_cast<int>(completed.size()));
-        return false;
-    }
-    *images_out = results;
-    *num_images_out = static_cast<int>(completed.size());
-    return true;
+        sd_boundary_error("generate_try_on", "context retired after exception; free and recreate it"); });
 }
 
 SD_API bool sd_ctx_supports_video_generation(const sd_ctx_t* sd_ctx) {

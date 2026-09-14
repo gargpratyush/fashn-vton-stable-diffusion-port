@@ -10,6 +10,7 @@ sampling and prepared-input inference execute natively.
 **[API and developer guide](docs/fashn_vton.md)** |
 **[Comparison results](reports/q4-q5-results.md)** |
 **[Project history](reports/README.md)** |
+**[Tests and maintenance](docs/fashn_quality.md)** |
 **[ARM64 / Android plan](docs/fashn_android_plan.md)**
 
 ## What this project implements
@@ -26,12 +27,35 @@ sampling and prepared-input inference execute natively.
   numerical/visual comparisons.
 - ARM64 transfer/integrity tooling and an Android CPU cross-build, with separate
   device acceptance checkpoints.
+- Reliability safeguards: scoped C API ownership and exception handling,
+  worker failure/shutdown handling, a separately testable try-on runtime,
+  versioned experiment recovery, and focused native/Python/UI CI.
 
 **Validated deployment path: Windows x64 floating CPU inference.**
 Quantized inference and OpenBLAS remain diagnostic-only; public generation
 rejects quantized checkpoints. Android binaries have been cross-built, not
 accepted through device inference. A separate Windows ARM64 SDXS smoke test
 does not establish FASHN ARM64 support. GPU execution is unvalidated here.
+
+## Finding your way around
+
+| You want to... | Start here |
+|---|---|
+| Run a prepared try-on or enable preprocessing/server mode | [Quickstart](docs/fashn_quickstart.md) |
+| Integrate the C API | [`include/stable-diffusion.h`](include/stable-diffusion.h), [API guide](docs/fashn_vton.md) |
+| Understand model detection, weights and the transformer | [`src/model/diffusion/fashn_vton.h`](src/model/diffusion/fashn_vton.h), [`fashn_vton_model.h`](src/model/diffusion/fashn_vton_model.h) |
+| Follow request execution and sampling | [`src/runtime/fashn_try_on.cpp`](src/runtime/fashn_try_on.cpp), [`fashn_vton_sampling.h`](src/runtime/fashn_vton_sampling.h) |
+| Change CLI, HTTP jobs or the try-on UI | [`examples/cli`](examples/cli), [`examples/server`](examples/server); the owned UI is `try_on.html` / `try_on.js` |
+| Work on optional native pose/parser preparation | [`examples/fashn-preprocess`](examples/fashn-preprocess) |
+| Reproduce precision results or recover a new experiment | [`scripts`](scripts), [maintenance commands](docs/fashn_quality.md), [study plan](docs/fashn_q4_q5_plan.md) |
+| Inspect actual images and numerical evidence | [Results](reports/q4-q5-results.md), [offline HTML](reports/fashn-all-comparisons.html), [history index](reports/README.md) |
+| Build/test the port or prepare ARM64/Android work | [`tests`](tests), [test tiers](docs/fashn_quality.md), [transfer runbook](docs/fashn_arm_transfer.md) |
+
+The prepared-input path is **C API / CLI / HTTP -> FASHN request runtime ->
+sampler -> transformer -> GGML**. Raw-image preprocessing is an optional stage
+before that path. `src/core` and `src/model_io` provide shared execution and
+loading; `ggml`, `thirdparty`, and the separate server `frontend` are dependencies,
+not the primary places to edit this port.
 
 ## Actual try-on comparisons
 

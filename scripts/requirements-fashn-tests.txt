@@ -1,0 +1,5 @@
+# Fast tooling/report tests only. No torch, preparation SDK, or model downloads.
+numpy==2.2.6
+pillow==11.3.0
+safetensors==0.6.2
+PyYAML==6.0.2

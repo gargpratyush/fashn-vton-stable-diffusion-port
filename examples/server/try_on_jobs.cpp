@@ -123,7 +123,7 @@ bool execute_try_on_job(ServerRuntime& runtime, AsyncGenerationJob& job, std::ve
     job.try_on_phase.store(TryOnPhase::Sampling);
     SDImageVec results;
     {
-        std::lock_guard<std::mutex> lock(*runtime.sd_ctx_mutex);
+        ServerGenerationLock lock(runtime);
         sd_image_t* raw = nullptr;
         int count       = 0;
         sd_try_on_callbacks_t callbacks{};
@@ -137,6 +137,9 @@ bool execute_try_on_job(ServerRuntime& runtime, AsyncGenerationJob& job, std::ve
         };
         bool ok = generate_try_on_with_callbacks(runtime.sd_ctx, &job.try_on.inputs.params, &callbacks, &raw, &count);
         results.adopt(raw, count);
+        if (!sd_ctx_supports_try_on(runtime.sd_ctx)) {
+            runtime.async_job_manager->worker_failed.store(true);
+        }
         if (!ok || count == 0) {
             error_message = "generate_try_on failed or returned no images";
             return false;

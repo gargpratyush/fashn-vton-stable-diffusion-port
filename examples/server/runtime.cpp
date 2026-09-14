@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "async_jobs.h"
 
 #include <algorithm>
 #include <cctype>
@@ -9,6 +10,7 @@
 #include <regex>
 #include <sstream>
 
+#include "common/base64.h"
 #include "common/common.h"
 #include "common/log.h"
 
@@ -26,30 +28,8 @@ static bool is_supported_model_ext(const fs::path& p) {
     return ext == ".gguf" || ext == ".pt" || ext == ".pth" || ext == ".safetensors";
 }
 
-static const std::string k_base64_chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz"
-    "0123456789+/";
-
 std::string base64_encode(const std::vector<uint8_t>& bytes) {
-    std::string ret;
-    int val  = 0;
-    int valb = -6;
-    for (uint8_t c : bytes) {
-        val = (val << 8) + c;
-        valb += 8;
-        while (valb >= 0) {
-            ret.push_back(k_base64_chars[(val >> valb) & 0x3F]);
-            valb -= 6;
-        }
-    }
-    if (valb > -6) {
-        ret.push_back(k_base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
-    }
-    while (ret.size() % 4) {
-        ret.push_back('=');
-    }
-    return ret;
+    return sd_base64_encode(bytes);
 }
 
 std::string normalize_output_format(std::string output_format) {
@@ -167,6 +147,9 @@ std::string video_mime_type(const std::string& output_format) {
 }
 
 bool runtime_supports_generation_mode(const ServerRuntime& runtime, SDMode mode) {
+    if (runtime.async_job_manager != nullptr && runtime.async_job_manager->worker_failed.load()) {
+        return false;
+    }
     if (mode == TRY_ON) {
         return sd_ctx_supports_try_on(runtime.sd_ctx);
     }

@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import statistics
 import time
+import uuid
 from types import SimpleNamespace
 
 import numpy as np
@@ -18,8 +19,8 @@ from benchmark_fashn_vton import measure_command
 from compare_fashn_case_output import crop_pixels
 from compare_fashn_trajectories import canonical, compare, metrics, pixels
 from export_fashn_runtime_weights import export
-from export_fashn_vton_reference import sha256
-from run_fashn_quality import write_report
+from fashn_artifacts import sha256, read_json, write_report, atomic_text, exclusive_lock
+from fashn_metrics import distribution, pixel_metrics, worst_region
 
 
 POLICIES = ("bf16", "q8_0", "q4_0", "q5_0", "q4_K", "q5_K")
@@ -27,47 +28,6 @@ LOWER = POLICIES[2:]
 CASES = {"cardigan": ("flat-top-free", 1), "bottoms": ("worn-bottoms-free", 2)}
 RESTORED = ["single_blocks.12.linear1.weight", "single_blocks.11.linear1.weight",
             "single_blocks.8.linear1.weight", "single_blocks.14.linear1.weight"]
-
-
-def read_json(path):
-    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
-
-
-def distribution(values):
-    values = [float(value) for value in values]
-    if not values or not np.isfinite(values).all():
-        raise ValueError("Expected finite nonempty timing samples")
-    mean = statistics.mean(values)
-    deviation = statistics.stdev(values) if len(values) > 1 else None
-    return {"n": len(values), "values": values, "mean": mean, "min": min(values), "max": max(values),
-            "sample_stddev": deviation,
-            "coefficient_of_variation": deviation / mean if deviation is not None and mean else None}
-
-
-def pixel_metrics(expected, actual):
-    if expected.dtype != np.uint8 or actual.dtype != np.uint8 or expected.shape != actual.shape:
-        raise ValueError("Expected matching uint8 images")
-    delta = actual.astype(np.float64) - expected
-    mse = float(np.mean(delta * delta))
-    return {"rmse": float(np.sqrt(mse)), "mae": float(np.mean(np.abs(delta))),
-            "max_abs": float(np.max(np.abs(delta))), "changed_channels": int(np.count_nonzero(delta)),
-            "signed_error_mean": float(np.mean(delta)), "error_population_variance": float(np.var(delta)),
-            "psnr_db": float(10 * np.log10(255 ** 2 / mse)) if mse else None, "exact": mse == 0}
-
-
-def worst_region(expected, actual, size=64):
-    if expected.shape != actual.shape or expected.ndim != 3 or expected.shape[2] != 3:
-        raise ValueError("Expected matching RGB images")
-    height, width = expected.shape[:2]
-    size = min(size, height, width)
-    best = None
-    for y in sorted(set(range(0, height - size + 1, size // 2 or 1)) | {height - size}):
-        for x in sorted(set(range(0, width - size + 1, size // 2 or 1)) | {width - size}):
-            delta = actual[y:y + size, x:x + size].astype(np.float64) - expected[y:y + size, x:x + size]
-            error = float(np.mean(delta * delta))
-            if best is None or error > best["mse"]:
-                best = {"x": x, "y": y, "width": size, "height": size, "mse": error}
-    return best
 
 
 def validate_execution(manifest, events, matrix_type, restored, kind, case, seed):
@@ -103,24 +63,8 @@ def select_candidate(rows):
 def exclusive_run(root):
     if os.name != "nt":
         raise RuntimeError("This measurement study requires Windows process accounting")
-    import msvcrt
-    with (root / "study.lock").open("a+b") as lock:
-        if lock.tell() == 0:
-            lock.write(b"\0")
-            lock.flush()
-        lock.seek(0)
-        msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
-        try:
-            yield
-        finally:
-            lock.seek(0)
-            msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
-
-
-def atomic_text(path, text):
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(text, encoding="utf-8")
-    temporary.replace(path)
+    with exclusive_lock(root / "study.lock"):
+        yield
 
 
 def reference_view(source, destination, kind):
@@ -175,6 +119,9 @@ class Study:
                   self.repo / "scripts/compare_fashn_case_output.py",
                   self.repo / "scripts/export_fashn_vton_reference.py",
                   self.repo / "scripts/run_fashn_quality.py",
+                  self.repo / "scripts/fashn_artifacts.py",
+                  self.repo / "scripts/fashn_metrics.py",
+                  self.repo / "scripts/fashn_process_state.py",
                   self.repo / "docs/fashn_q4_q5_plan.md"]
         inputs += [self.repo / path for path in (
             "src/model/diffusion/fashn_vton.h", "src/convert.cpp", "src/model_loader.cpp",
@@ -200,6 +147,8 @@ class Study:
             if not args.resume:
                 raise ValueError("Study exists; use --resume")
             self.state = read_json(self.state_path)
+            if self.state.get("schema") != "fashn-q45-study-v2":
+                raise ValueError("Frozen study: use its original checkout; new runs need a fresh v2 output directory")
             if self.state["provenance"] != provenance:
                 raise ValueError("Study provenance changed; do not reuse prior measurements")
             for label, row in self.state["jobs"].items():
@@ -209,7 +158,7 @@ class Study:
                     if sha256(self.root / relative) != digest:
                         raise ValueError("Completed job artifact changed: " + relative)
         else:
-            self.state = {"complete": False, "phase": "QP3", "active_job": None, "provenance": provenance,
+            self.state = {"schema": "fashn-q45-study-v2", "complete": False, "phase": "QP3", "active_job": None, "provenance": provenance,
                           "weights": self.weights, "jobs": {}, "scientific_scope": "Diagnostic only; no human approval",
                           "expected_probe_jobs": 18, "expected_full_jobs": 18}
         self.prepare_gallery_inputs()
@@ -371,6 +320,8 @@ class Study:
 
     def run_job(self, label, case, policy, seed=42, kind="full"):
         if label in self.state["jobs"]:
+            if self.state["jobs"][label]["status"] != "done":
+                raise ValueError("Recover the incomplete job before resuming: " + label)
             return self.state["jobs"][label]
         folder = self.root / "runs" / label
         folder.mkdir(parents=True, exist_ok=False)
@@ -391,13 +342,14 @@ class Study:
             command += ["--f32-matrices", str(self.root / "restored-four.json")]
         if kind == "probe":
             command += ["--probe-forwards", "2", "--no-record"]
-        row = {"status": "running", "kind": kind, "case": case, "policy": policy, "seed": seed,
+        row = {"attempt_id": uuid.uuid4().hex, "status": "running", "kind": kind, "case": case, "policy": policy, "seed": seed,
                "command": command, "started_unix_seconds": time.time()}
         self.state["jobs"][label] = row
         self.state["active_job"] = label
         self.publish()
         print(f"START {self.state['phase']} {label}", flush=True)
-        measurement = measure_command(command, folder / "run.log", 14400, folder / "memory-timeline.jsonl")
+        measurement = measure_command(command, folder / "run.log", 14400, folder / "memory-timeline.jsonl",
+                                      process_path=folder / "process.json")
         row["measurement"] = measurement
         write_report(folder / "measurement.json", measurement)
         if measurement["exit_code"] != 0:
@@ -586,13 +538,16 @@ def main():
         study = Study(args)
         try:
             study.execute()
-        except (RuntimeError, ValueError, OSError, KeyError) as error:
+        except (Exception, KeyboardInterrupt) as error:
+            study.state["complete"] = False
             study.state["operational_error"] = str(error)
             active = study.state["active_job"]
             if active is not None:
                 row = study.state["jobs"][active]
-                row["status"] = "analysis_failed" if row.get("measurement", {}).get("exit_code") == 0 else "failed"
-            study.publish()
+                row["status"] = ("interrupted" if isinstance(error, KeyboardInterrupt) else
+                                 "analysis_failed" if row.get("measurement", {}).get("exit_code") == 0 else "failed")
+            # Persist failure independently of HTML generation, which may itself have failed.
+            write_report(study.state_path, study.state)
             raise
 
 

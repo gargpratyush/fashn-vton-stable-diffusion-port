@@ -135,7 +135,7 @@ class LowbitStudyTests(unittest.TestCase):
             study.state = {"complete": False, "phase": "QP3", "active_job": None, "jobs": {},
                            "provenance": {"files": {str(executable): sha256(executable)}}}
 
-            def native_fixture(command, log, timeout, timeline):
+            def native_fixture(command, log, timeout, timeline, process_path=None):
                 destination = Path(command[3])
                 destination.mkdir()
                 manifest = self.fixture_manifest()

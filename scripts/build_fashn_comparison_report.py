@@ -13,12 +13,9 @@ from safetensors.numpy import load_file
 
 from compare_fashn_case_output import crop_pixels
 from compare_fashn_trajectories import pixels
-from run_fashn_q45_study import pixel_metrics, worst_region, read_json, sha256, atomic_text
-
-
-LABELS = {"bf16": "BF16 storage / F32 compute", "q8_0": "Q8_0", "q4_0": "Q4_0",
-          "q5_0": "Q5_0", "q4_K": "Q4_K", "q5_K": "Q5_K",
-          "selected-mixed": "Q5_K + 4 original F32 matrices"}
+from fashn_artifacts import read_json, sha256, atomic_text, portable
+from fashn_metrics import pixel_metrics, worst_region
+from fashn_report_policy import policy_labels
 
 
 def compare_images(reference, candidate):
@@ -37,17 +34,6 @@ def script_json(value):
     return json.dumps(value, ensure_ascii=True, allow_nan=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
-def portable(value, roots):
-    if isinstance(value, dict):
-        return {portable(key, roots): portable(item, roots) for key, item in value.items()}
-    if isinstance(value, list):
-        return [portable(item, roots) for item in value]
-    if isinstance(value, str):
-        for path, label in roots:
-            value = value.replace(str(path), label).replace(path.as_posix(), label)
-    return value
-
-
 class Report:
     def __init__(self, experiment, repo):
         self.experiment, self.repo = experiment.resolve(), repo.resolve()
@@ -55,6 +41,7 @@ class Report:
         self.state = read_json(self.root / "results.json")
         if not self.state["complete"] or len(self.state["jobs"]) != 36:
             raise ValueError("Report requires the complete 36-job study")
+        self.labels = policy_labels(self.state)
         self.images, self.arrays, self.rows, self.evidence = {}, {}, [], {}
 
     def evidence_file(self, path, expected=None):
@@ -98,7 +85,7 @@ class Report:
                 self.evidence_file(self.root / relative, digest)
             comparison = read_json(folder / "comparison" / "comparison.json")
             self.rows.append({
-                "id": name, "label": LABELS[row["policy"]] + (" (repeat)" if name.startswith("repeat-") else ""),
+                "id": name, "label": self.labels[row["policy"]] + (" (repeat)" if name.startswith("repeat-") else ""),
                 "policy": row["policy"], "case": row["case"], "seed": row["seed"],
                 "group": "current" if name.startswith("full-") and row["seed"] == 42 else "repeat-seed",
                 "sample": self.load_image(folder / "sample.png"), "full": self.load_image(folder / "full.png"),
@@ -199,6 +186,7 @@ class Report:
         self.evidence_file(legacy_path)
         legacy = read_json(legacy_path)
         payload = {
+            "selection": self.state["selection"], "selection_label": self.labels[self.state["selection"]],
             "rows": self.rows, "images": self.images, "inputs": inputs,
             "probes": self.state["probe_statistics"], "repeatability": self.state["repeatability"],
             "mixed": self.state["mixed_precision"], "seed_sensitivity": self.state["seed_sensitivity"],

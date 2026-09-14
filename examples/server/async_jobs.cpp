@@ -10,6 +10,7 @@
 #include "common/log.h"
 #include "common/media_io.h"
 #include "common/resource_owners.hpp"
+#include "core/api_boundary.h"
 
 const char* async_job_kind_name(AsyncJobKind kind) {
     switch (kind) {
@@ -242,8 +243,11 @@ json make_async_job_json(const AsyncJobManager& manager, const AsyncGenerationJo
              job.error_code.empty()
                   ? (job.status == AsyncJobStatus::Cancelled ? "cancelled" : "generation_failed")
                   : job.error_code},
-             {"message", job.error_message},
+            {"message", job.worker_failure ? "worker failed; server restart required" : job.error_message},
         };
+        if (job.worker_failure) {
+            result["error"]["code"] = "worker_failed";
+        }
     } else {
         result["result"] = nullptr;
         result["error"]  = nullptr;
@@ -261,7 +265,7 @@ bool execute_img_gen_job(ServerRuntime& runtime,
     SDImageVec results;
 
     {
-        std::lock_guard<std::mutex> lock(*runtime.sd_ctx_mutex);
+        ServerGenerationLock lock(runtime);
         sd_image_t* raw_results = nullptr;
         int num_results         = 0;
         if (!generate_image(runtime.sd_ctx, &params, &raw_results, &num_results)) {
@@ -331,7 +335,7 @@ bool execute_vid_gen_job(ServerRuntime& runtime,
     sd_audio_t* generated_audio = nullptr;
 
     {
-        std::lock_guard<std::mutex> lock(*runtime.sd_ctx_mutex);
+        ServerGenerationLock lock(runtime);
         sd_image_t* raw_results = nullptr;
         if (!generate_video(runtime.sd_ctx, &params, &raw_results, &num_results, &generated_audio)) {
             raw_results = nullptr;
@@ -365,14 +369,75 @@ bool execute_vid_gen_job(ServerRuntime& runtime,
     return true;
 }
 
+static void async_job_worker_loop(ServerRuntime& runtime);
+
+void request_async_worker_stop(AsyncJobManager& manager) {
+    {
+        std::lock_guard<std::mutex> lock(manager.mutex);
+        manager.stop = true;
+        for (auto& entry : manager.jobs) {
+            if (entry.second->kind == AsyncJobKind::TryOn) {
+                entry.second->cancellation_requested.store(true);
+            }
+        }
+    }
+    manager.cv.notify_all();
+}
+
+void fail_async_worker(AsyncJobManager& manager) {
+    std::lock_guard<std::mutex> lock(manager.mutex);
+    manager.stop = true;
+    manager.worker_failed.store(true);
+    manager.queue.clear();
+    for (auto& entry : manager.jobs) {
+        auto& job = *entry.second;
+        if (job.status != AsyncJobStatus::Queued && job.status != AsyncJobStatus::Generating) {
+            continue;
+        }
+        job.status         = job.cancellation_requested.load() ? AsyncJobStatus::Cancelled : AsyncJobStatus::Failed;
+        job.worker_failure = job.status == AsyncJobStatus::Failed;
+        job.completed_at   = unix_timestamp_now();
+        job.try_on.release_raw_images();
+        for (auto& image : job.try_on.inputs.images) {
+            image.reset();
+        }
+        std::vector<std::string>().swap(job.result_images_b64);
+        std::string().swap(job.result_media_b64);
+        job.try_on_image_charge = 0;
+        job.try_on_phase.store(TryOnPhase::Done);
+    }
+    manager.cv.notify_all();
+}
+
 void async_job_worker(ServerRuntime& runtime) {
+    const bool clean = sd_api_boundary("async worker", false, [&] {
+        async_job_worker_loop(runtime);
+        return true;
+    });
+    if (!clean) {
+        // Unknown execution failures retire the worker; the shared model may be invalid.
+        if (!sd_api_boundary("async worker shutdown", false, [&] {
+                fail_async_worker(*runtime.async_job_manager);
+                return true;
+            })) {
+            runtime.async_job_manager->worker_failed.store(true);
+        }
+    }
+}
+
+static void async_job_worker_loop(ServerRuntime& runtime) {
     AsyncJobManager& manager = *runtime.async_job_manager;
 
     while (true) {
         std::shared_ptr<AsyncGenerationJob> job;
         {
             std::unique_lock<std::mutex> lock(manager.mutex);
-            manager.cv.wait(lock, [&]() { return manager.stop || !manager.queue.empty(); });
+            manager.cv.wait(lock, [&]() { return manager.stop || manager.worker_failed.load() || !manager.queue.empty(); });
+            if (manager.worker_failed.load()) {
+                lock.unlock();
+                fail_async_worker(manager);
+                return;
+            }
 
             if (manager.stop && manager.queue.empty()) {
                 break;
@@ -407,6 +472,11 @@ void async_job_worker(ServerRuntime& runtime) {
         std::string error_message;
         bool ok = false;
 
+#ifdef SD_FASHN_TEST_FAULTS
+        if (manager.fault_injection) {
+            manager.fault_injection("execute");
+        }
+#endif
         if (job->kind == AsyncJobKind::ImgGen) {
             ok = execute_img_gen_job(runtime, *job, output_images, error_message);
         } else if (job->kind == AsyncJobKind::TryOn) {
@@ -423,6 +493,11 @@ void async_job_worker(ServerRuntime& runtime) {
             error_message = "unsupported job kind";
         }
 
+#ifdef SD_FASHN_TEST_FAULTS
+        if (manager.fault_injection) {
+            manager.fault_injection("finalize");
+        }
+#endif
         {
             std::lock_guard<std::mutex> lock(manager.mutex);
             auto it = manager.jobs.find(job->id);

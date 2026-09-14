@@ -542,6 +542,11 @@ void register_sdcpp_api_endpoints(httplib::Server& svr, ServerRuntime& rt) {
 
             {
                 std::lock_guard<std::mutex> lock(manager.mutex);
+                if (manager.stop) {
+                    res.status = 503;
+                    res.set_content(R"({"error":"server is shutting down"})", "application/json");
+                    return;
+                }
                 purge_expired_jobs(manager);
                 if (count_pending_jobs(manager) >= manager.max_pending_jobs) {
                     res.status = 429;
@@ -604,6 +609,11 @@ void register_sdcpp_api_endpoints(httplib::Server& svr, ServerRuntime& rt) {
 
             {
                 std::lock_guard<std::mutex> lock(manager.mutex);
+                if (manager.stop) {
+                    res.status = 503;
+                    res.set_content(R"({"error":"server is shutting down"})", "application/json");
+                    return;
+                }
                 purge_expired_jobs(manager);
                 if (count_pending_jobs(manager) >= manager.max_pending_jobs) {
                     res.status = 429;

@@ -3,11 +3,12 @@ import argparse
 import io
 import json
 from pathlib import Path
+import tempfile
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from build_fashn_comparison_report import portable
-from run_fashn_q45_study import read_json, sha256, write_report
+from fashn_artifacts import portable, read_json, sha256, write_report, exclusive_lock
+from fashn_report_policy import policy_labels
 
 
 def contact_sheet(paths, labels, title):
@@ -32,7 +33,7 @@ def contact_sheet(paths, labels, title):
     return stream.getvalue()
 
 
-def package(repo, experiment):
+def stage_package(repo, experiment, source_repo):
     repo, experiment = repo.resolve(), experiment.resolve()
     study = experiment / "q45-study"
     report_dir = repo / "reports"
@@ -41,6 +42,7 @@ def package(repo, experiment):
     state = read_json(study / "results.json")
     if not state["complete"] or len(state["jobs"]) != 36 or any(row["status"] != "done" for row in state["jobs"].values()):
         raise ValueError("Only the complete study can be published")
+    names = policy_labels(state)
     entries = {}
 
     def publish(source, target, transform=None):
@@ -55,7 +57,7 @@ def package(repo, experiment):
             "original_sha256": sha256(source), "published_sha256": sha256(target),
             "bytes": len(published), "unchanged": data == published}
 
-    roots = [(experiment, "local-experiment"), (repo, "repository")]
+    roots = [(experiment, "local-experiment"), (source_repo, "repository")]
 
     def normalized(data):
         return (json.dumps(portable(json.loads(data), roots), indent=2, allow_nan=False) + "\n").encode("utf-8")
@@ -83,7 +85,7 @@ def package(repo, experiment):
         order = ("ca_image", "garment_image", "python", "bf16", "q8_0",
                  "q4_0", "q4_K", "q5_0", "q5_K", "selected-mixed")
         labels = ("Prepared person", "Prepared garment", "Original Python", "BF16 / F32", "Q8_0",
-                  "Q4_0", "Q4_K", "Q5_0", "Q5_K", "Q5_K + 4 F32")
+                  "Q4_0", "Q4_K", "Q5_0", "Q5_K", names["selected-mixed"])
         target = destination / f"{case}-overview.png"
         target.write_bytes(contact_sheet([images[key] for key in order], labels,
                                          "FASHN precision comparison: " + case))
@@ -96,6 +98,32 @@ def package(repo, experiment):
                 "notice": "reports/NOTICE.md; imagery/adaptations have separate noncommercial attribution/share-alike requirements.",
                 "study_results_sha256": sha256(study / "results.json")}
     write_report(report_dir / "precision-publication-manifest.json", manifest)
+    return manifest
+
+
+def install_publication(repo, stage, manifest):
+    ledger = Path("reports/precision-publication-manifest.json")
+    for name, entry in manifest["files"].items():
+        if sha256(stage / name) != entry["published_sha256"]:
+            raise ValueError("Staged publication hash mismatch: " + name)
+    # Multi-file replacement is not atomic. An interrupted install must not retain
+    # a success-shaped old ledger describing a now partially replaced publication.
+    (repo / ledger).unlink(missing_ok=True)
+    for name in manifest["files"]:
+        target = repo / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        (stage / name).replace(target)
+    (stage / ledger).replace(repo / ledger)
+
+
+def package(repo, experiment):
+    repo = repo.resolve()
+    with exclusive_lock(repo / ".fashn-publication.lock"):
+        with tempfile.TemporaryDirectory(prefix=".fashn-publication-", dir=repo) as temporary:
+            stage = Path(temporary)
+            manifest = stage_package(stage, experiment, repo)
+            install_publication(repo, stage, manifest)
+    entries = manifest["files"]
     print(json.dumps({"published_files": len(entries), "bytes": sum(row["bytes"] for row in entries.values())}, indent=2))
 
 

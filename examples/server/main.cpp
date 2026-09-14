@@ -13,6 +13,8 @@
 #include "async_jobs.h"
 #include "common/common.h"
 #include "common/resource_owners.hpp"
+#include "common/scoped_thread.h"
+#include "core/api_boundary.h"
 #include "routes.h"
 #include "runtime.h"
 
@@ -77,7 +79,13 @@ void sd_log_cb(enum sd_log_level_t level, const char* log, void* data) {
     log_print(level, log, svr_params->log_level, svr_params->color);
 }
 
+static int server_main(int argc, const char** argv);
+
 int main(int argc, const char** argv) {
+    return sd_api_boundary("sd-server", 1, [&] { return server_main(argc, argv); });
+}
+
+static int server_main(int argc, const char** argv) {
     if (argc > 1 && std::string(argv[1]) == "--version") {
         std::cout << version_string() << "\n";
         return EXIT_SUCCESS;
@@ -163,7 +171,8 @@ int main(int argc, const char** argv) {
             return 1;
         }
     }
-    std::thread async_worker(async_job_worker, std::ref(runtime));
+    ScopedThread async_worker([&] { async_job_worker(runtime); },
+                              [&] { request_async_worker_stop(async_job_manager); });
 
     httplib::Server svr;
     if (sd_ctx_supports_try_on(sd_ctx.get())) {
@@ -200,29 +209,34 @@ int main(int argc, const char** argv) {
 
     LOG_INFO("listening on: http://%s:%d\n", svr_params.listen_ip.c_str(), svr_params.listen_port);
     bool listening_ok = false;
-    if (is_try_on) {
+    {
         if (svr.bind_to_port(svr_params.listen_ip, svr_params.listen_port)) {
             std::atomic<bool> finished{false};
-            std::thread shutdown_monitor([&] {
-                while (!finished.load()) {
-                    // httplib ignores stop() until the bound listener is running.
-                    if (try_on_shutdown_requested.load(std::memory_order_relaxed) && svr.is_running()) {
-                        stop_try_on_jobs(async_job_manager);
-                        svr.stop();
-                        break;
-                    }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                }
-            });
+            ScopedThread shutdown_monitor([&] {
+                if (!sd_api_boundary("shutdown monitor", false, [&] {
+                        while (!finished.load()) {
+                            // httplib ignores stop() until the bound listener is running.
+                            if ((try_on_shutdown_requested.load(std::memory_order_relaxed) ||
+                                 async_job_manager.worker_failed.load()) && svr.is_running()) {
+                                stop_try_on_jobs(async_job_manager);
+                                svr.stop();
+                                break;
+                            }
+                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        }
+                        return true;
+                    })) {
+                    async_job_manager.worker_failed.store(true);
+                    svr.stop();
+                } }, [&] {
+                finished.store(true);
+                svr.stop(); });
             listening_ok = svr.listen_after_bind();
             finished.store(true);
-            shutdown_monitor.join();
         }
         stop_try_on_jobs(async_job_manager);
         if (!listening_ok && !try_on_shutdown_requested.load())
             LOG_ERROR("Failed to listen on %s:%d", svr_params.listen_ip.c_str(), svr_params.listen_port);
-    } else {
-        listening_ok = svr.listen(svr_params.listen_ip, svr_params.listen_port);
     }
 
     {
@@ -230,6 +244,9 @@ int main(int argc, const char** argv) {
         async_job_manager.stop = true;
     }
     async_job_manager.cv.notify_all();
-    async_worker.join();
-    return is_try_on && !listening_ok && !try_on_shutdown_requested.load() ? 1 : 0;
+    async_worker.finish();
+    return async_job_manager.worker_failed.load() ||
+                   (is_try_on && !listening_ok && !try_on_shutdown_requested.load())
+               ? 1
+               : 0;
 }

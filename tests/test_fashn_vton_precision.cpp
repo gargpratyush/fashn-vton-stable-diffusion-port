@@ -34,6 +34,10 @@ int main() {
             if (tensor.expected_type != expected)
                 return 1;
         }
+        if (!assign_fashn_test_matrix_types(tensors, type, {restored}, types) ||
+            types[restored] != "f32" || types["x_patch_mixer.0.linear2.weight"] != ggml_type_name(type)) {
+            return 1;
+        }
     }
     if (fashn_test_matrix_type("q2_K") != GGML_TYPE_COUNT ||
         assign_fashn_test_matrix_types(tensors, GGML_TYPE_Q2_K, {}, types))

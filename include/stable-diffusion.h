@@ -487,6 +487,7 @@ SD_API void sd_ctx_params_init(sd_ctx_params_t* sd_ctx_params);
 SD_API char* sd_ctx_params_to_str(const sd_ctx_params_t* sd_ctx_params);
 
 SD_API sd_ctx_t* new_sd_ctx(const sd_ctx_params_t* sd_ctx_params);
+// Accepts NULL. Release contexts with this function, never a caller's allocator.
 SD_API void free_sd_ctx(sd_ctx_t* sd_ctx);
 SD_API void free_sd_audio(sd_audio_t* audio);
 
@@ -537,6 +538,9 @@ SD_API bool generate_try_on(sd_ctx_t* sd_ctx, const sd_try_on_params_t* params,
 
 // Request-local callbacks run synchronously on the generation thread. Keep data
 // alive until return; cancellation may be observed only between model forwards.
+// Callbacks must not throw or reenter generation on the same context.
+// An internal exception fails the call with cleared outputs and retires the
+// try-on context; free and recreate it before further generation.
 // A supplied callback object replaces the global progress callback for this request.
 typedef struct {
     size_t struct_size;

@@ -7,6 +7,7 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "async_jobs.h"
 #include "common/common.h"
 #include "common/media_io.h"
 #include "common/resource_owners.hpp"
@@ -337,7 +338,7 @@ void register_sdapi_endpoints(httplib::Server& svr, ServerRuntime& rt) {
             int num_results = 0;
 
             {
-                std::lock_guard<std::mutex> lock(*runtime->sd_ctx_mutex);
+                ServerGenerationLock lock(*runtime);
                 sd_image_t* raw_results = nullptr;
                 if (!generate_image(runtime->sd_ctx, &img_gen_params, &raw_results, &num_results)) {
                     raw_results = nullptr;
