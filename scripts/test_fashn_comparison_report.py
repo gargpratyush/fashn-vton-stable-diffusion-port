@@ -3,6 +3,9 @@ from pathlib import Path
 import unittest
 import tempfile
 import io
+import re
+import shutil
+import subprocess
 
 import numpy as np
 from PIL import Image
@@ -15,6 +18,72 @@ from unittest.mock import patch
 
 
 class ComparisonReportTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for report rendering checks")
+    def test_python_baseline_rendering_and_incomplete_memory_mean(self):
+        root = Path(__file__).resolve().parents[1]
+        published = (root / "reports/fashn-all-comparisons.html").read_text(encoding="utf-8")
+        payload = json.loads(re.search(
+            r'<script id="report-data" type="application/json">(.*?)</script>',
+            published, re.S).group(1))
+        payload["images"] = {}
+        template = (root / "scripts/fashn_comparison_template.html").read_text(encoding="utf-8")
+        script = template.rsplit("<script>", 1)[1].split("</script>", 1)[0]
+        harness = r"""
+const assert = require("node:assert/strict");
+const vm = require("node:vm");
+const {script, data} = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+const elements = new Map();
+function element(id) {
+    if (!elements.has(id)) elements.set(id, {
+        value: id === "case" ? "cardigan" : id === "reference" ? "q8_0" : "",
+        innerHTML: "", textContent: "", style: {}, open: false,
+        prepend(node) { throw new Error(node.textContent); },
+    });
+    return elements.get(id);
+}
+element("report-data").textContent = JSON.stringify(data);
+const document = {getElementById: element, addEventListener() {}, createElement() { return {}; },
+    documentElement: {dataset: {}}};
+const context = vm.createContext({document, console});
+vm.runInContext(script, context);
+assert.equal(document.documentElement.dataset.reportReady, "true");
+function firstCells(id) {
+    const row = element(id).innerHTML.match(/<tbody><tr>(.*?)<\/tr>/s)[1];
+    return [...row.matchAll(/<td>(.*?)<\/td>/gs)].map(m => m[1]);
+}
+for (const name of ["cardigan", "bottoms"]) {
+    for (const reference of ["q8_0", "bf16", "python"]) {
+        element("case").value = name;
+        element("reference").value = reference;
+        vm.runInContext("populate()", context);
+        const cells = firstCells("current-table");
+        assert.match(cells[0], /Original PyTorch F32.*historical/);
+        assert.equal(cells[1], name === "cardigan" ? "1241.3" : "1263.7");
+        assert.equal(cells[2], name === "cardigan" ? "1258.0" : "1325.5");
+        assert.equal(cells[3], name === "cardigan" ? "N/A" : "6.573");
+        assert.equal(cells[4], name === "cardigan" ? "N/A" : "9.603");
+        assert.equal(cells.at(-1), "Not evaluated here");
+        assert.match(element("gallery").innerHTML, /Original PyTorch F32.*historical/);
+    }
+}
+let summary = firstCells("aggregate-table");
+assert.deepEqual(summary.slice(1, 7), ["20.88", "21.53", "N/A", "N/A", "Not controlled", "Not controlled"]);
+assert.equal((element("bars").innerHTML.match(/Python \[historical\]/g) || []).length, 1);
+assert.match(element("python-memory-table").innerHTML, /6.573.*9.603/s);
+assert.match(element("python-memory-table").innerHTML, /cardigan<\/td><td>N\/A<\/td><td>N\/A/);
+// A future valid second case may enable a mean, but never reuse the single available peak.
+vm.runInContext("rowBy('python-cardigan').ws=2**30; rowBy('python-cardigan').private=2**30; summaries()", context);
+summary = firstCells("aggregate-table");
+assert.equal(summary[3], ((1 + 7057371136 / 2**30) / 2).toFixed(3));
+assert.equal(summary[4], ((1 + 10310897664 / 2**30) / 2).toFixed(3));
+assert.equal((element("bars").innerHTML.match(/Python \[historical\]/g) || []).length, 2);
+"""
+        result = subprocess.run(
+            [shutil.which("node"), "-e", harness],
+            input=json.dumps({"script": script, "data": payload}),
+            text=True, capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_selection_drives_labels_and_required_rows(self):
         for selected in ("q4_K", "q5_K"):
             state = {"selection": selected, "weights": {"selected-mixed": {

@@ -1,10 +1,14 @@
 # FASHN VTON 1.5 on Android: feasibility and checkpoint plan
 
 **Status: original analysis and proposed work, not an implemented Android app.**
+Subsequent [Samsung S23 Q4_K evidence](../reports/android-s23-q4k/README.md)
+demonstrates one completed 20-step native Android image on source `e86c564`,
+but strict same-policy numerical agreement failed. That result does not close
+the correctness, sustained-operation or app-deployment gates below.
 Subsequent host preparation has produced Android cross-builds and a
 diagnostic imported-noise path; see [the device transfer runbook](fashn_arm_transfer.md)
-for executable handoff instructions and the current host report. Native
-Windows ARM64/Android FASHN execution, APK, GPU and NPU acceptance remain
+for executable handoff instructions and the host report. Native Windows ARM64
+FASHN validation, strict Android numerical acceptance, APK, GPU and NPU remain
 separate gates. Interface sketches below remain proposals.
 
 Source baseline: `55db93d6f2536f12428e170acbafd0cca3182c59`.
@@ -39,6 +43,7 @@ Prove that path before investing in a full camera/gallery application.
 | Evidence | Established | Not established |
 |---|---|---|
 | Existing Windows x64 FASHN results | Full model, upstream parity, resource attribution, complete images | Android or Windows ARM64 FASHN behavior |
+| Subsequent S23 Q4_K run, source `e86c564` | Native CPU completion: 20 steps / 39 forwards, 6 h 41 min 39 s, reported peak RSS approximately 1.03 GiB | Strict same-policy parity (failed), fast/sustained deployment, later maintenance revisions or a controlled same-phone quantization speedup |
 | User-reported Windows ARM64 smoke | Checkout `d04e895`; Clang 19.1.5; native ARM64 PE machine `0xAA64`; SDXS 512x512 cat, one step, six CPU threads, 33.4 seconds | FASHN kernels, FASHN accuracy, Android ABI, phone performance, GPU/NPU |
 | GGML source | ARM kernels, Android-specific backend variant definitions, CPU abort API | Every relevant operation passing on a particular phone |
 | Android/ORT documentation | Supported native build/deployment mechanisms | This checkout building or running successfully without adaptation |
@@ -318,16 +323,26 @@ garment and masking behavior. Audit pose/model/dependency licenses too.
 These are the final **Windows x64 prepared-input** observations, not Android
 requirements or forecasts:
 
-| Policy | Sampling seconds | Peak working set GiB | Sampled private commit GiB |
+| Implementation / policy | Sampling interval seconds | Peak working set GiB | Sampled private commit GiB |
 |---|---:|---:|---:|
+| Original Python F32, historical cardigan | 1241.326, sampler + PIL | N/A | N/A |
+| Original Python F32, historical bottoms | 1263.737, sampler + PIL | 6.573 | 9.603 |
 | Floating CPU, cardigan | 2371.130 | 2.0109 | 2.1402 |
 | Floating OpenBLAS, cardigan, diagnostic | 1598.136 | 2.0281 | 4.2843 |
 | Q8, cardigan, diagnostic | 1863.072 | 1.4002 | 1.5281 |
 | Mixed, cardigan, diagnostic | 1898.820 | 1.5266 | 1.6532 |
 
-The measured floating CPU run takes about 39.5 minutes. This is evidence of
+The [original Python reference](../reports/original-python-baseline.md) uses the
+unmodified default CPU sampler with batched CFG, not the forced-math oracle.
+Its process wall was 1258.037 / 1325.477 s; cardigan memory was invalid.
+These historical sampler/PIL intervals are not equivalent to native recording
+and do not measure the raw pipeline or Python on Android.
+
+The measured native floating CPU run takes about 39.5 minutes. This is evidence of
 a substantial workload, not a prediction that a phone will take exactly
-that long. There is no defensible Android seconds/image figure yet.
+that long. At this plan's baseline there was no Android seconds/image result.
+The later [S23 Q4_K run](../reports/android-s23-q4k/README.md) measured
+6 h 41 min 39 s process wall, but no same-phone original-Python baseline.
 These optimized historical measurements include the fused-GELU option;
 the proposed initial Android baseline leaves it off until independently
 qualified.

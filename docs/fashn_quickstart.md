@@ -13,6 +13,9 @@ Other platforms and GPUs need their own validation.
 For the proposed ARM64 Android path, platform gaps and sequential acceptance
 checkpoints, see [the Android feasibility plan](fashn_android_plan.md).
 That plan does not establish Android runtime support.
+Subsequently, [one diagnostic S23 Q4_K generation completed](../reports/android-s23-q4k/README.md),
+but failed strict cross-platform parity. It does not enable the public quantized
+API or replace this quickstart's validated floating path.
 For the prepared-input source/data bundle and exact Windows ARM64/Android
 handoff steps, see [the device transfer runbook](fashn_arm_transfer.md).
 
@@ -163,16 +166,22 @@ does not cap model, ORT, graph or total process memory.
 
 For the same 20-step cardigan workload on the evaluation VM:
 
-| Configuration | Sampling | Peak working set | Sampled peak private commit |
+| Configuration | Sampling interval | Peak working set | Sampled peak private commit |
 |---|---:|---:|---:|
+| Original Python F32, historical cardigan | 1241.33 s, sampler + PIL | N/A | N/A |
 | Floating CPU, optimized | 2371.13 s | 2.01 GiB | 2.14 GiB |
 | Floating OpenBLAS, diagnostic | 1598.14 s | 2.03 GiB | 4.28 GiB |
 | Q8, diagnostic | 1863.07 s | 1.40 GiB | 1.53 GiB |
 | Mixed, diagnostic | 1898.82 s | 1.53 GiB | 1.65 GiB |
 
 Private commit and working set overlap; do not add them.
-Original Python remains faster in the historical prepared-input
-observations. Quantized outputs preserve their historical same-policy
+The [original Python default sampler](../reports/original-python-baseline.md)
+took 1258.04 s process wall for cardigan. It uses batched CFG/default CPU SDPA,
+no trajectory recording, and bypasses raw preparation/constructor startup.
+Cardigan memory is invalid; the separate bottoms case measured 6.573 GiB
+working set and 9.603 GiB private commit. Python was faster in these historical
+observations, not a controlled same-interval speed comparison.
+Quantized outputs preserve their historical same-policy
 pixels, but still fail the floating numerical gates.
 
 The public path therefore stays floating/CPU. Q8/mixed and BLAS are

@@ -7,6 +7,9 @@ Read [the measured results](../q4-q5-results.md) and
 For zoom, reference selection, overlay comparisons, numerical errors,
 latency and memory, download [the standalone HTML](../fashn-all-comparisons.html)
 and open it locally. No separate image folder is needed for that HTML.
+The [original Python baseline](../original-python-baseline.md) identifies the
+unchanged upstream sampler behind the Python images and its measured latency
+and memory; it is not the separate forced-math numerical oracle.
 
 ## Cardigan
 

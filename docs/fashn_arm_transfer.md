@@ -4,6 +4,12 @@ This is the operational handoff for the host preparation following
 [the Android plan](fashn_android_plan.md). The first destination is the
 Windows ARM64 machine that already ran the native SDXS smoke.
 
+**Later result:** the separate Q4_K bundle/source `e86c564` completed a
+[Samsung S23 cardigan run](../reports/android-s23-q4k/README.md).
+Strict numerical parity failed. The original BF16 bundle pins and handoff
+instructions below remain unchanged; this is not evidence that every original
+acceptance checkpoint or a newer checkout passed.
+
 **The Git repository alone is not enough to run an image.** It contains
 source and reports, not model weights or the complete numerical reference
 fixtures. Use a recursive source checkout **plus the private transfer

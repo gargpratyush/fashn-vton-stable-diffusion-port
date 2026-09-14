@@ -92,11 +92,15 @@ Bright contours and colored noise are deliberately amplified differences. The ma
 <section id="numbers">
 <h2>2. Numerical difference, latency &amp; measured memory</h2>
 <p id="table-reference"></p>
-<p class="muted">One seed-42 run per case/policy. Sampling seconds include modulation preparation and trajectory recording.
-Process wall includes native startup/shutdown. These are prepared-input measurements: preprocessing, HTTP and model downloads are excluded.</p>
+<p class="muted">One seed-42 run per case/policy. Native sampling includes modulation preparation and trajectory recording.
+The original Python baseline uses the unchanged upstream sampler/default CPU SDPA with batched CFG; its interval includes PIL conversion, not trajectory recording.
+It bypasses raw preparation and pipeline construction. These historical Python observations are not controlled speed comparisons with the current native runs.
+Process wall is shown separately; preprocessing, HTTP and model downloads are excluded.</p>
 <div id="current-table" class="table-wrap"></div>
-<h3>Current-study two-case summary</h3><p class="muted">Arithmetic means across cardigan and bottoms, not repeated-run uncertainty estimates.
-Memory here is the mean of each run's process peak, not simultaneous memory consumption.</p>
+<h3>Two-case summary with original Python context</h3><p class="muted">Arithmetic means across cardigan and bottoms, not repeated-run uncertainty estimates.
+Python retains its historical timing scope and receives no controlled speedup percentage.
+Memory is the mean of both case peaks, not simultaneous consumption. Python's mean memory is unavailable because cardigan tracked the launcher;
+its valid bottoms measurement is shown in the memory section. The memory chart omits unavailable means, never substitutes zero.</p>
 <div id="aggregate-table" class="table-wrap"></div><div id="bars" class="bars"></div>
 <details><summary>Metric definitions and interpreting dB</summary>
 <p><b>RMSE:</b> root mean squared channel error on the unresized 576x768 crop, using RGB values 0..255.
@@ -113,6 +117,12 @@ fit, realism, texture preservation or whether either output is a good try-on.</p
 
 <section id="memory">
 <h2>3. Where the memory goes</h2>
+<h3>Original Python process memory, historical</h3>
+<p>The unmodified upstream F32 sampler ran on Windows x64 CPU with 16 threads.
+Only the bottoms run monitored the actual interpreter; cardigan memory is unavailable.
+Python has no corresponding GGML arena/cache or ready-GGUF measurements.</p>
+<div id="python-memory-table" class="table-wrap"></div>
+<h3>Native current-study allocations</h3>
 <p>All current runs use ready GGUF files with <b>zero runtime weight conversions and no source mmap</b>.
 About 996 MiB of modulation/conditioning weights are retired before denoising. Activations and protected F32 parameters remain:
 4-bit weight storage does not mean a 4x process-memory reduction.</p>
@@ -127,6 +137,10 @@ These logical allocation peaks may not coincide and do not account for every lib
 <div class="notice">Historical measurements, not newly rerun or controlled against the current study.
 Python uses batched CFG/default SDPA without intermediate trajectory recording; its sampling interval includes PIL conversion.
 The old cardigan Python measurement tracked its launcher, so its memory is marked unavailable rather than reporting an implausibly low value.</div>
+<p>Original implementation:
+<a href="https://github.com/fashn-AI/fashn-vton-1.5/tree/7c0f10af3f91ad4048fe9729c470a13ef905d25a">FASHN AI / fashn-vton-1.5, pinned source</a>.
+These prepared-input CPU F32 runs use PyTorch 2.8.0+cpu, not the full raw-photo constructor or an upstream GPU benchmark.
+There are no equivalent original-Python full-model repeated-run, seed-43 or Android measurements in this report.</p>
 <div id="history-table" class="table-wrap"></div>
 <h3>Earlier pre-optimization native runs</h3><p class="muted">Preserved to explain why old Q8 memory figures were larger.
 These used different loading/lifetime behavior; do not treat them as current quantization costs.</p>
@@ -191,7 +205,7 @@ function metric(label,value){return '<div class="metric"><b>'+esc(value)+'</b><s
 function rowBy(id){const r=D.rows.find(r=>r.id===id);if(!r)throw Error("Missing row "+id);return r}
 function refRow(c,ref){return rowBy(ref==="python"?"python-"+c:`full-${c}-${ref}-s42`)}
 function pairMetric(m){return metric("Crop RMSE (0..255)",fmt(m.rmse,4))+metric("Crop PSNR (dB)",psnr(m))+metric("Mean absolute error",fmt(m.mae,4))+metric("Max channel error",fmt(m.max_abs,0))+metric("Pixels >10 levels",fmt(m.pixels_above_10_percent,3)+"%")+metric("Worst scanned 64x64 PSNR",psnr(m.local))}
-function figure(r){return '<figure><span class="output-tag">ACTUAL GENERATED OUTPUT</span><figcaption>'+esc(r.label)+'</figcaption><img loading="lazy" src="'+D.images[r.sample]+'" alt="'+esc(r.label)+' generated crop"><button data-compare="'+esc(r.id)+'">Compare</button><button data-full="'+esc(r.id)+'">Full canvas</button></figure>'}
+function figure(r){return '<figure><span class="output-tag">ACTUAL GENERATED OUTPUT</span><figcaption>'+esc(r.label)+(r.policy==="python"?" [historical]":"")+'</figcaption><img loading="lazy" src="'+D.images[r.sample]+'" alt="'+esc(r.label)+' generated crop"><button data-compare="'+esc(r.id)+'">Compare</button><button data-full="'+esc(r.id)+'">Full canvas</button></figure>'}
 function openZoom(src,title){$("zoom-image").src=src;$("zoom-title").textContent=title;$("zoom").showModal()}
 $("close-zoom").onclick=()=>$("zoom").close();
 let active=null,reference=null,renderVersion=0;
@@ -212,11 +226,12 @@ function refresh(){
  $("left-zoom").onclick=()=>openZoom(D.images[reference.sample],reference.label+" - actual output");
  $("right-zoom").onclick=()=>openZoom(D.images[active.sample],active.label+" - actual output");
  $("inputs").innerHTML=Object.entries(D.inputs[c]).map(([k,v])=>'<figure><figcaption>PREPARED INPUT - '+(k==="ca_image"?"PERSON":"GARMENT")+'</figcaption><img loading="lazy" src="'+D.images[v]+'" alt="Prepared '+esc(k)+'"></figure>').join("");
- $("gallery").innerHTML=current.filter(r=>r.case===c).map(figure).join("");
+ const caseRows=[refRow(c,"python"),...current.filter(r=>r.case===c)];
+ $("gallery").innerHTML=caseRows.map(figure).join("");
  $("table-reference").textContent="Selected case: "+c+". Pixel reference: "+reference.label+". RMSE / MAE / max are channel levels 0..255; higher PSNR is closer.";
- const headers=["Policy","Sampling s","Wall s","Peak WS GiB","Private GiB","RMSE","PSNR dB","MAE","Error variance","Max","Pixels >10 %","Worst64 PSNR","Trajectory gate*"];
- function cells(r){const m=r.comparisons[ref];return [esc(r.label),fmt(r.sampling,1),fmt(r.wall,1),gib(r.ws),gib(r.private),fmt(m.rmse,4),psnr(m),fmt(m.mae,4),fmt(m.error_population_variance,4),fmt(m.max_abs,0),fmt(m.pixels_above_10_percent,3),psnr(m.local),r.gate===null?"Not evaluated here":r.gate?"PASS":"FAIL"]}
- $("current-table").innerHTML=table(headers,current.filter(r=>r.case===c).map(cells))+"<p class='muted'>*Trajectory gates use saved floating references, not the image reference selector. See per-step panel.</p>";
+ const headers=["Implementation / policy","Sampling interval s","Wall s","Peak WS GiB","Private GiB","RMSE","PSNR dB","MAE","Error variance","Max","Pixels >10 %","Worst64 PSNR","Trajectory gate*"];
+ function cells(r){const m=r.comparisons[ref];return [esc(r.label)+(r.policy==="python"?" [historical]":""),fmt(r.sampling,1),fmt(r.wall,1),gib(r.ws),gib(r.private),fmt(m.rmse,4),psnr(m),fmt(m.mae,4),fmt(m.error_population_variance,4),fmt(m.max_abs,0),fmt(m.pixels_above_10_percent,3),psnr(m.local),r.gate===null?"Not evaluated here":r.gate?"PASS":"FAIL"]}
+ $("current-table").innerHTML=table(headers,caseRows.map(cells))+"<p class='muted'>*Trajectory gates use saved floating references, not the image reference selector. See per-step panel.</p>";
  $("history-table").innerHTML=table([...headers.slice(0,-1),"Memory / timing caveat"],D.rows.filter(r=>r.case===c&&r.group==="historical").map(r=>[...cells(r).slice(0,-1),esc(r.memory_note)]));
  renderTrajectory();renderVersion++;if($("diagnostics").open)renderDiagnostics(renderVersion);
 }
@@ -257,10 +272,15 @@ function renderTrajectory(){
 }
 function summaries(){
  const policies=[...new Set(current.map(r=>r.policy))],averages=policies.map(p=>{const rows=current.filter(r=>r.policy===p);return {p,label:rows[0].label,time:mean(rows.map(r=>r.sampling)),wall:mean(rows.map(r=>r.wall)),ws:mean(rows.map(r=>r.ws)),private:mean(rows.map(r=>r.private)),rmse:mean(rows.map(r=>r.comparisons.bf16.rmse))}});
+ const python=["cardigan","bottoms"].map(c=>refRow(c,"python"));
+ const completeMean=key=>python.every(r=>r[key]!=null)?mean(python.map(r=>r[key])):null;
+ const baseline={p:"Python [historical]",label:python[0].label+" [historical]",time:completeMean("sampling"),wall:completeMean("wall"),ws:completeMean("ws"),private:completeMean("private"),rmse:mean(python.map(r=>r.comparisons.bf16.rmse)),historical:true};
+ const displayed=[baseline,...averages];
  const bf=averages.find(r=>r.p==="bf16"),q4=averages.find(r=>r.p==="q4_K");
  $("headline").innerHTML=metric("Current full generations",18)+metric("Current probe processes",18)+metric("Q4_K lower mean peak WS",fmt(100*(1-q4.ws/bf.ws),1)+"%")+metric("Q4_K less sampling time",fmt(100*(1-q4.time/bf.time),1)+"%");
- $("aggregate-table").innerHTML=table(["Policy","Mean sampling min","Mean wall min","Mean peak WS GiB","Mean private GiB","Less time vs BF16 %","Lower WS vs BF16 %","Mean crop RMSE vs BF16"],averages.map(r=>[esc(r.label),fmt(r.time/60),fmt(r.wall/60),gib(r.ws),gib(r.private),fmt(100*(1-r.time/bf.time),1),fmt(100*(1-r.ws/bf.ws),1),fmt(r.rmse,4)]));
- $("bars").innerHTML=[["Sampling time (minutes)","time",60],["Peak working set (GiB)","ws",2**30]].map(([title,key,unit])=>"<div><h3>"+title+"</h3>"+averages.map(r=>'<div class="barrow"><span>'+esc(r.p)+'</span><div><div class="bar" style="width:'+100*r[key]/Math.max(...averages.map(a=>a[key]))+'%"></div></div><b>'+fmt(r[key]/unit,2)+'</b></div>').join("")+"</div>").join("");
+ $("aggregate-table").innerHTML=table(["Implementation / policy","Mean interval min","Mean wall min","Mean peak WS GiB","Mean private GiB","Less time vs BF16 %","Lower WS vs BF16 %","Mean crop RMSE vs BF16"],displayed.map(r=>[esc(r.label),fmt(r.time/60),fmt(r.wall/60),gib(r.ws),gib(r.private),r.historical?"Not controlled":fmt(100*(1-r.time/bf.time),1),r.historical?"Not controlled":fmt(100*(1-r.ws/bf.ws),1),fmt(r.rmse,4)]));
+ $("bars").innerHTML=[["Sampling interval (minutes)","time",60],["Mean peak working set (GiB)","ws",2**30]].map(([title,key,unit])=>{const rows=displayed.filter(r=>r[key]!=null);return "<div><h3>"+title+"</h3>"+rows.map(r=>'<div class="barrow"><span>'+esc(r.p)+'</span><div><div class="bar" style="width:'+100*r[key]/Math.max(...rows.map(a=>a[key]))+'%"></div></div><b>'+fmt(r[key]/unit,2)+'</b></div>').join("")+"</div>"}).join("");
+ $("python-memory-table").innerHTML=table(["Original Python case","Peak WS GiB","Private GiB","Measurement scope"],python.map(r=>[esc(r.case),gib(r.ws),gib(r.private),esc(r.memory_note)]));
  $("weight-table").innerHTML=table(["Policy","GGUF bytes","File GiB","Active weights MiB","Arena peak MiB","Cache peak MiB","Conversion scratch bytes"],policies.map(p=>{const r=current.find(r=>r.policy===p),h=r.high_water;return [esc(r.label),r.file_bytes,gib(r.file_bytes),fmt(r.logical.weights.assigned_payload_bytes/2**20,3),fmt(h.runtime_buffer_bytes/2**20,3),fmt(h.modulation_cache_bytes/2**20,3),h.conversion_scratch_bytes]}));
  $("probe-table").innerHTML=table(["Policy","n","First mean s","Warm mean s","Warm SD s","Warm CV %","Warm min / max s","Mean peak WS GiB","Mean private GiB","Velocity rel L2 samples"],Object.entries(D.probes).map(([p,s])=>[esc(p),s.warm_forward_seconds.n,fmt(s.first_forward_seconds.mean,3),fmt(s.warm_forward_seconds.mean,3),fmt(s.warm_forward_seconds.sample_stddev,3),fmt(100*s.warm_forward_seconds.coefficient_of_variation,2),fmt(s.warm_forward_seconds.min,3)+" / "+fmt(s.warm_forward_seconds.max,3),gib(s.peak_working_set_bytes.mean),gib(s.sampled_peak_private_bytes.mean),s.velocity_relative_l2.map(x=>x.toExponential(3)).join(", ")]));
  const rep=D.repeatability,rr=[rowBy("full-cardigan-"+D.selection+"-s42"),...D.rows.filter(r=>r.id.startsWith("repeat-")&&r.policy===D.selection)];

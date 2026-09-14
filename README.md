@@ -9,6 +9,7 @@ sampling and prepared-input inference execute natively.
 **[Build and run](docs/fashn_quickstart.md)** |
 **[API and developer guide](docs/fashn_vton.md)** |
 **[Comparison results](reports/q4-q5-results.md)** |
+**[Original Python baseline](reports/original-python-baseline.md)** |
 **[Project history](reports/README.md)** |
 **[Tests and maintenance](docs/fashn_quality.md)** |
 **[ARM64 / Android plan](docs/fashn_android_plan.md)**
@@ -25,17 +26,18 @@ sampling and prepared-input inference execute natively.
 - Diagnostic Q8/Q4/Q5 and selective mixed precision, with exact conversion
   verification, complete image trajectories, memory profiling and reproducible
   numerical/visual comparisons.
-- ARM64 transfer/integrity tooling and an Android CPU cross-build, with separate
-  device acceptance checkpoints.
+- ARM64 transfer/integrity tooling and native Android CPU execution demonstrated
+  by a complete Samsung S23 Q4_K cardigan run; numerical acceptance remains open.
 - Reliability safeguards: scoped C API ownership and exception handling,
   worker failure/shutdown handling, a separately testable try-on runtime,
   versioned experiment recovery, and focused native/Python/UI CI.
 
 **Validated deployment path: Windows x64 floating CPU inference.**
 Quantized inference and OpenBLAS remain diagnostic-only; public generation
-rejects quantized checkpoints. Android binaries have been cross-built, not
-accepted through device inference. A separate Windows ARM64 SDXS smoke test
-does not establish FASHN ARM64 support. GPU execution is unvalidated here.
+rejects quantized checkpoints. One Android Q4_K generation completed, but failed
+strict same-policy numerical parity; it is not production/device acceptance.
+A separate Windows ARM64 SDXS smoke test does not establish FASHN support on
+Windows ARM64. GPU execution is unvalidated here.
 
 ## Finding your way around
 
@@ -90,8 +92,9 @@ Current study: Windows x64 CPU, AMD EPYC 7763 exposure, 16 inference threads,
 Same prepared inputs, ready weights, F32 flash attention, modulation cache,
 strict fused GELU and recorded trajectories for every current policy.
 
-| Policy | Mean sampling time | Mean peak working set | Crop RMSE vs BF16: cardigan / bottoms |
+| Implementation / policy | Mean sampling interval | Mean peak working set | Crop RMSE vs BF16: cardigan / bottoms |
 |---|---:|---:|---:|
+| Original Python F32, historical default sampler | 20.9 min, sampler + PIL | N/A; bottoms alone: 6.573 GiB | 0.0072 / 0.0058 |
 | BF16 storage / F32 compute | 38.7 min | 2.01 GiB | Reference |
 | Q8_0 | 30.5 min | 1.40 GiB | 1.59 / 0.42 |
 | Q4_0 | 34.1 min | 1.07 GiB | 3.49 / 1.79 |
@@ -100,7 +103,16 @@ strict fused GELU and recorded trajectories for every current policy.
 | Q5_K | 36.5 min | 1.16 GiB | 2.28 / 1.02 |
 | Q5_K + 4 original F32 matrices | 35.9 min | 1.30 GiB | 2.23 / 0.87 |
 
-Times and working sets are arithmetic means across two cases, not confidence
+The [original Python baseline](reports/original-python-baseline.md) uses the
+unmodified upstream sampler/default CPU SDPA and batched CFG, with the same
+prepared cases and 16 threads. It bypasses raw preparation/pipeline construction
+and records no intermediate trajectory. Its sampler/PIL interval differs from
+native recording; these are historical observations, not controlled speedups.
+Python process wall was 20.97 / 22.09 min for cardigan / bottoms.
+Only bottoms has valid interpreter memory: 6.573 GiB working set and 9.603 GiB
+private commit. Cardigan memory and the two-case Python memory mean are unavailable.
+
+Native times and working sets are arithmetic means across two cases, not confidence
 intervals. Sampling includes recording and modulation preparation; raw-image
 preprocessing and HTTP overhead are excluded. RMSE uses byte-channel levels
 0..255, lower is closer. Working set and private commit overlap and must not
@@ -160,9 +172,20 @@ reference experiments and tooling, not the deployed prepared-input runtime.
 
 ## ARM64 and Android
 
-The Android ARM64 CPU CLI and diagnostics were cross-built on the x64 host
-using NDK r28c. ELF architecture/alignment and host correctness controls
-were checked; no Android device inference was completed.
+**A Samsung S23 (8 GB RAM) completed a native Q4_K cardigan generation:**
+20 steps / 39 forwards in **6 h 41 min 39 s**, using one inference thread,
+approximately **1.03 GiB peak sampled RSS**, and **640 MiB peak sampled swap**.
+Maximum battery temperature was 41.3 C and thermal status reached MODERATE;
+the powered run needed no watchdog abort.
+
+The crop was close to x64 Q4_K in pixel space (RMSE 0.799, PSNR 50.08 dB),
+but final float relative L2 **0.00824 failed the 0.001 gate**. This demonstrates
+execution, not fast or numerically accepted deployment. It tested source
+`e86c564`, not the later maintenance changes.
+See [the Android run details and actual image](reports/android-s23-q4k/README.md).
+For context, original Python on the 16-thread Windows CPU took 20 min 58 s
+process wall for cardigan; no original-Python baseline was measured on the S23.
+This is not a same-device speed comparison.
 
 Use [the transfer runbook](docs/fashn_arm_transfer.md) and
 [host preparation evidence](reports/android-host-preparation.md).

@@ -1443,6 +1443,14 @@ and use a separate build so the ordinary CPU binary remains available.
 
 ### Integrated CPU optimization results
 
+For an explicit upstream comparison, the
+[original Python baseline](../reports/original-python-baseline.md) records the
+unmodified default CPU sampler at 1241.326 / 1263.737 s sampler-plus-PIL and
+1258.037 / 1325.477 s process wall for cardigan / bottoms. Valid bottoms memory
+is 6.573 GiB working set and 9.603 GiB private commit; cardigan memory is
+unavailable. This is historical prepared-input inference with batched CFG, not
+raw pipeline startup, the forced-math oracle or a matched native recording interval.
+
 On the 16-logical-CPU Windows evaluation VM, matching runtime-ready weights,
 mmap off, bounded modulation precomputation with parameter release, and
 strict fused GELU reduced full 20-step Q8 working-set peaks from approximately
@@ -1474,10 +1482,9 @@ model arguments, with mmap and eager loading disabled:
 These measurements use prepared inputs, 576x864 generation, 20 steps,
 CFG1.5, shift1.5, skip1, seed42 and 16 threads, not raw HTTP end-to-end
 latency. Existing original-Python observations remain faster than native
-BLAS; no universal speed claim is made. Full local evidence and ten
-full-resolution comparison rows are in
-`C:\source\fashn-vton-reference\reports\memory-and-latency-optimization-results.md`
-and `C:\source\fashn-vton-reference\reports\comparison-gallery-optimized\index.html`.
+BLAS; no universal speed claim is made. See the published
+[optimization evidence](../reports/memory-and-latency-optimization-results.md)
+and [full-resolution gallery](../reports/comparison-gallery-optimized/index.html).
 
 ### CFG pairing diagnostics
 

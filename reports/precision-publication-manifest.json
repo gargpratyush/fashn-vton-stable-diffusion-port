@@ -3,9 +3,9 @@
   "files": {
     "reports/fashn-all-comparisons.html": {
       "origin": "local-experiment/q45-study/fashn-all-comparisons.html",
-      "original_sha256": "16a0462c200646bcd36ee4da479060753fa33009a46b9dd0eb92803f97b31e40",
-      "published_sha256": "16a0462c200646bcd36ee4da479060753fa33009a46b9dd0eb92803f97b31e40",
-      "bytes": 25676374,
+      "original_sha256": "7f8953a3f31fc7faa289953e3945b99ff59160ca60715c3a8d1d1e65b1110abb",
+      "published_sha256": "7f8953a3f31fc7faa289953e3945b99ff59160ca60715c3a8d1d1e65b1110abb",
+      "bytes": 25677638,
       "unchanged": true
     },
     "reports/evidence/q45-study/results.json": {
@@ -94,8 +94,8 @@
     },
     "reports/comparison-gallery-precision/cardigan-overview.png": {
       "origin": "Derived labeled contact sheet; thumbnails only, metrics use unresized originals",
-      "published_sha256": "7ab9b103ea2c99e561ba576f5271ac02cc17b41e416a173d0500f154c4590b52",
-      "bytes": 830225,
+      "published_sha256": "b1afe515676f736cee61475f5e37edfd1adc2c1fd8616f854358e244e5cf7b6c",
+      "bytes": 832400,
       "source_images": [
         "reports/comparison-gallery-precision/images/cardigan-ca_image.png",
         "reports/comparison-gallery-precision/images/cardigan-garment_image.png",
@@ -181,8 +181,8 @@
     },
     "reports/comparison-gallery-precision/bottoms-overview.png": {
       "origin": "Derived labeled contact sheet; thumbnails only, metrics use unresized originals",
-      "published_sha256": "808a51f878f3076624eb488166229a39bb2900591055c2d1aa47e1026f578da4",
-      "bytes": 625328,
+      "published_sha256": "aefebe1a781b4c0ce358df7ec238eb77198983a4247a46cbcfe52fc55096c0f4",
+      "bytes": 627452,
       "source_images": [
         "reports/comparison-gallery-precision/images/bottoms-ca_image.png",
         "reports/comparison-gallery-precision/images/bottoms-garment_image.png",

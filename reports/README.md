@@ -6,6 +6,13 @@ claim of production readiness or public quantized/GPU support.
 
 ## Start here
 
+- [Original/default Python baseline](original-python-baseline.md): the unchanged
+  upstream CPU sampler, approximately 20.9 min mean sampler/PIL time, valid
+  bottoms interpreter memory and explicit unavailable cardigan memory.
+- [Samsung S23 Android Q4_K run](android-s23-q4k/README.md): actual output,
+  20 steps / 39 forwards completed in 6 h 41 min 39 s, approximately 1.03 GiB
+  peak sampled RSS. Execution succeeded; strict same-policy numerical parity
+  failed. Includes memory/thermal observations and provenance.
 - [Completed Q4/Q5/mixed results](q4-q5-results.md): 18 full generations,
   18 probe processes, actual memory, latency, direct Q8 differences and repeats.
 - [All-in-one precision HTML](fashn-all-comparisons.html): download/open
@@ -52,6 +59,9 @@ It preserves output PNG bytes and numerical values; the explicitly labeled
 README contact sheets resize thumbnails for display only. The old manifest
 remains the historical publication ledger, not an inventory of subsequent
 source/report additions.
+The current precision HTML also surfaces the historical Python baseline in
+its primary comparison tables; refreshing its presentation does not rerun
+inference or turn historical measurements into controlled native comparisons.
 
 The history's code excerpts are final working-tree snapshots, not invented
 per-checkpoint commits. Old future-tense statements and failed measurements

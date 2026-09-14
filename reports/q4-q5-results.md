@@ -18,6 +18,9 @@ The interactive report hides error maps by default.
 
 ## Controlled full-image measurements
 
+The native rows below form the current study; original Python is included as
+a clearly labeled historical baseline, not as an additional controlled run.
+
 Windows x64 CPU, AMD EPYC 7763 exposure, 16 inference threads, two load
 threads, 20 steps, CFG 1.5, shift 1.5, skip last CFG step, seed 42.
 Canvas 576x864; matched displayed crop 576x768. Ready GGUF, no mmap,
@@ -25,8 +28,9 @@ F32 flash attention, bounded modulation cache and strict fused GELU.
 Sampling includes modulation preparation and intermediate recording.
 Preprocessing, HTTP and downloads are excluded.
 
-| Policy | Cardigan sampling s | Bottoms sampling s | Cardigan peak WS GiB | Bottoms peak WS GiB | Cardigan private GiB | Bottoms private GiB |
+| Implementation / policy | Cardigan sampling interval s | Bottoms sampling interval s | Cardigan peak WS GiB | Bottoms peak WS GiB | Cardigan private GiB | Bottoms private GiB |
 |---|---:|---:|---:|---:|---:|---:|
+| Original Python F32, historical | 1241.326 | 1263.737 | N/A | 6.573 | N/A | 9.603 |
 | BF16/F32 | 2326.329 | 2317.110 | 2.0107 | 2.0118 | 2.1393 | 2.1394 |
 | Q8_0 | 1815.613 | 1846.951 | 1.4013 | 1.4003 | 1.5285 | 1.5285 |
 | Q4_0 | 2031.929 | 2058.341 | 1.0718 | 1.0716 | 1.1975 | 1.1974 |
@@ -39,6 +43,13 @@ GiB means 2^30 bytes. Working set and private commit overlap: **do not add
 them**. These are single observations per case/policy, not statistical
 confidence intervals. Filesystem caches were not flushed.
 
+The [original Python default sampler](original-python-baseline.md) uses batched
+CFG/default CPU SDPA and includes PIL conversion, but not native trajectory
+recording or raw preparation. Its process wall was 1258.037 / 1325.477 s.
+Cardigan memory is unavailable because the old monitor tracked the launcher;
+only bottoms has valid interpreter memory. Do not calculate a two-case Python
+memory mean or a controlled Python/native speed ratio from these rows.
+
 ## Final cropped numerical differences
 
 RMSE uses RGB byte-channel levels 0..255. PSNR = 20 log10(255/RMSE).
@@ -48,6 +59,7 @@ historical original Python.
 
 | Policy | Cardigan RMSE vs BF16 | Bottoms RMSE vs BF16 | Cardigan PSNR vs Q8 dB | Bottoms PSNR vs Q8 dB |
 |---|---:|---:|---:|---:|
+| Original Python F32, historical | 0.0072 | 0.0058 | 44.082 | 55.586 |
 | Q8_0 | 1.5939 | 0.4240 | Exact | Exact |
 | Q4_0 | 3.4936 | 1.7913 | 37.236 | 43.194 |
 | Q4_K | 3.0025 | 1.2374 | 37.747 | 45.799 |
@@ -80,6 +92,8 @@ conversions, zero conversion scratch and no source mmap. Modulation
 precomputation retires 1,044,172,800 bytes of parameters before denoising.
 Logical allocations and process peaks are different measurements;
 activations and protected F32 parameters limit total memory savings.
+Original Python's measured process memory is included above; equivalent
+GGML arena/cache and ready-GGUF accounting is not applicable to that runtime.
 
 Exact-block conversion verification covered all 104 eligible matrices.
 Protected embeddings/modulations/norms/patch kernels/biases/final layers
@@ -110,7 +124,8 @@ The old Q8-sensitive subset is not proven to be the optimum Q5_K policy.
 ## Historical controls and limitations
 
 Original Python and CPU/BLAS/Q8-mixed results are embedded in the HTML but
-kept separate from current averages. Their execution scopes and recording
+kept separate from native current-study averages. Python is also shown in the
+primary tables, with its own historical two-case timing mean. Execution scopes and recording
 overheads differ. Original Python was faster in those historical CPU
 observations. Its old cardigan memory sample monitored the launcher, not
 the interpreter: the new report marks that value unavailable.
